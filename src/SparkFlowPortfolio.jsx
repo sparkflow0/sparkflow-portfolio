@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Cpu, 
   Eye, 
@@ -23,10 +23,18 @@ import {
   Wrench
 } from 'lucide-react';
 
+const slugify = (str) => str
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/(^-|-$)/g, '');
+
 const SparkFlowPortfolio = () => {
   const [filter, setFilter] = useState('All');
   const [tutorialFilter, setTutorialFilter] = useState('All');
+  const [selectedTutorial, setSelectedTutorial] = useState(null);
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'tutorial-detail'
   const [activeVideo, setActiveVideo] = useState(null);
+  const tutorialDetailRef = useRef(null);
 
   const colors = {
     brandBlue: '#4DA9E2',
@@ -36,6 +44,33 @@ const SparkFlowPortfolio = () => {
     textLight: '#F3F4F6',
     textGray: '#9CA3AF'
   };
+
+  const navBar = (
+    <nav className="border-b border-gray-800 backdrop-blur-md fixed w-full z-50 bg-opacity-90" style={{ backgroundColor: colors.darkBg }}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <img 
+                src="/logo.png" 
+                alt="SparkFlow logo" 
+                className="h-12 w-auto"
+              />
+            </div>
+          <div className="hidden md:block">
+            <div className="ml-10 flex items-baseline space-x-8">
+              <a href="#home" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors" onClick={() => setViewMode('list')}>Home</a>
+              <a href="#stats" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors" onClick={() => setViewMode('list')}>Impact</a>
+              <a href="#tutorials" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors" onClick={() => { setViewMode('list'); window.location.hash = '#tutorials'; }}>Tutorials</a>
+              <a href="#projects" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors" onClick={() => setViewMode('list')}>Portfolio</a>
+              <a href="#contact" className="bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full text-sm font-medium transition-all" style={{ backgroundColor: colors.brandOrange, color: colors.textLight }}>
+                Contact Us
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
 
   // Categories for filtering
   const categories = ['All', 'AI & CV', 'IoT & Automation', 'Robotics', 'Web & Apps'];
@@ -155,8 +190,8 @@ sudo systemctl enable chirpstack-application-server
       image: 'https://placehold.co/600x340/111827/4DA9E2?text=Pi+Lab+Kit',
       code: `bash
 for i in {01..10}; do
-  sudo ./pi-clone /dev/sda /dev/sd${i}
-  sudo raspi-config nonint do_hostname "lab-pi-${i}"
+  sudo ./pi-clone /dev/sda /dev/sd\${i}
+  sudo raspi-config nonint do_hostname "lab-pi-\${i}"
 done
 `,
       deliverables: [
@@ -860,9 +895,41 @@ validated = guardrails.validate(output, schema=schema)
     }
   ];
 
+  const tutorialsWithSlugs = tutorials.map(t => ({ ...t, slug: slugify(t.title) }));
+
   const filteredTutorials = tutorialFilter === 'All'
-    ? tutorials
-    : tutorials.filter(t => t.category === tutorialFilter);
+    ? tutorialsWithSlugs
+    : tutorialsWithSlugs.filter(t => t.category === tutorialFilter);
+
+  useEffect(() => {
+    if (viewMode !== 'list') return;
+    if (tutorialFilter === 'All') {
+      setSelectedTutorial(tutorialsWithSlugs[0] || null);
+      return;
+    }
+    const first = tutorialsWithSlugs.find(t => t.category === tutorialFilter);
+    setSelectedTutorial(first || null);
+  }, [tutorialFilter, tutorialsWithSlugs, viewMode]);
+
+  useEffect(() => {
+    const openFromHash = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#tutorial/')) {
+        const slug = decodeURIComponent(hash.replace('#tutorial/', ''));
+        const found = tutorialsWithSlugs.find(t => t.slug === slug);
+        if (found) {
+          setSelectedTutorial(found);
+          setTutorialFilter(found.category);
+          setViewMode('tutorial-detail');
+        }
+      } else if (hash === '#tutorials') {
+        setViewMode('list');
+      }
+    };
+    openFromHash();
+    window.addEventListener('hashchange', openFromHash);
+    return () => window.removeEventListener('hashchange', openFromHash);
+  }, [tutorialsWithSlugs]);
 
   const projects = [
     // --- FROM IMAGE 3 (Workshops & Environment) ---
@@ -1127,33 +1194,80 @@ validated = guardrails.validate(output, schema=schema)
     ? projects 
     : projects.filter(p => p.category.includes(filter) || p.category === filter);
 
-  return (
-    <div className="min-h-screen font-sans" style={{ backgroundColor: colors.darkBg, color: colors.textLight }}>
-      {/* Navigation */}
-      <nav className="border-b border-gray-800 backdrop-blur-md fixed w-full z-50 bg-opacity-90" style={{ backgroundColor: colors.darkBg }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-              <div className="flex items-center">
+  if (viewMode === 'tutorial-detail' && selectedTutorial) {
+    return (
+      <div className="min-h-screen font-sans" style={{ backgroundColor: colors.darkBg, color: colors.textLight }}>
+        {navBar}
+        <main className="pt-24 pb-16">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <button 
+              onClick={() => { setViewMode('list'); window.location.hash = '#tutorials'; }}
+              className="inline-flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors mb-6"
+            >
+              <ChevronRight className="w-4 h-4 rotate-180" />
+              Back to tutorials
+            </button>
+
+            <div className="bg-gray-900 border border-gray-800 rounded-3xl overflow-hidden shadow-2xl">
+              <div className="h-80 w-full bg-gray-800 overflow-hidden">
                 <img 
-                  src="/logo.png" 
-                  alt="SparkFlow logo" 
-                  className="h-12 w-auto"
+                  src={selectedTutorial.image}
+                  alt={selectedTutorial.title}
+                  className="w-full h-full object-cover"
                 />
               </div>
-            <div className="hidden md:block">
-              <div className="ml-10 flex items-baseline space-x-8">
-                <a href="#home" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Home</a>
-                <a href="#stats" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Impact</a>
-                <a href="#tutorials" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Tutorials</a>
-                <a href="#projects" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Portfolio</a>
-                <a href="#contact" className="bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full text-sm font-medium transition-all" style={{ backgroundColor: colors.brandOrange, color: colors.textLight }}>
-                  Contact Us
-                </a>
+              <div className="p-8 lg:p-10">
+                <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-widest font-semibold" style={{ color: colors.brandBlue }}>
+                  <span className="px-3 py-1 rounded-full bg-gray-800 border border-gray-700 text-white">{selectedTutorial.category}</span>
+                  <span className="text-gray-400">Tutorial</span>
+                </div>
+                <h1 className="text-3xl lg:text-4xl font-extrabold text-white mt-3">{selectedTutorial.title}</h1>
+                <p className="mt-4 text-lg leading-relaxed" style={{ color: colors.textGray }}>
+                  {selectedTutorial.summary}
+                </p>
+
+                <div className="mt-8 grid lg:grid-cols-2 gap-6">
+                  <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
+                    <p className="text-sm font-semibold text-gray-200 mb-3">What you’ll capture</p>
+                    <ul className="space-y-3 text-sm" style={{ color: colors.textLight }}>
+                      {selectedTutorial.deliverables.map((item, i) => (
+                        <li key={i} className="flex gap-3">
+                          <span className="text-blue-400">•</span>
+                          <span className="text-gray-300">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
+                    <p className="text-sm font-semibold text-gray-200 mb-3">Starter code</p>
+                    <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 h-full">
+                      <pre className="text-xs text-gray-200 whitespace-pre-wrap leading-relaxed">
+{selectedTutorial.code}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8 bg-gray-800 border border-gray-700 rounded-2xl p-6">
+                  <p className="text-sm font-semibold text-gray-200 mb-3">How to use this tutorial</p>
+                  <ol className="list-decimal list-inside space-y-2 text-sm" style={{ color: colors.textLight }}>
+                    <li>Review the summary and asset list, gather the listed screenshots/photos and wiring references.</li>
+                    <li>Start from the starter code; adapt pins/paths to your hardware, then extend with your own requirements.</li>
+                    <li>Capture your build steps and final outputs to replace the placeholders when publishing.</li>
+                  </ol>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </nav>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen font-sans" style={{ backgroundColor: colors.darkBg, color: colors.textLight }}>
+      {navBar}
 
       {/* Hero Section */}
       <section id="home" className="pt-32 pb-20 lg:pt-48 lg:pb-32 relative overflow-hidden">
@@ -1301,55 +1415,100 @@ validated = guardrails.validate(output, schema=schema)
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredTutorials.map((tutorial, idx) => (
-              <div 
-                key={idx}
-                className="bg-gray-800 border border-gray-700 rounded-2xl overflow-hidden shadow-lg hover:border-gray-500 transition-all flex flex-col"
-              >
-                <div className="relative h-44 w-full overflow-hidden bg-gray-900 border-b border-gray-700">
-                  <div className="absolute top-3 left-3 z-20 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold border border-gray-600 bg-gray-900 bg-opacity-80 text-gray-200 shadow">
-                    <Bot className="w-3 h-3 text-orange-300" />
-                    <span>{tutorial.category}</span>
+          <div className="grid gap-8 lg:grid-cols-3">
+            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredTutorials.map((tutorial, idx) => (
+                <button 
+                  key={idx}
+                  onClick={() => {
+                    setSelectedTutorial(tutorial);
+                    setViewMode('tutorial-detail');
+                    window.location.hash = `tutorial/${tutorial.slug}`;
+                  }}
+                  className={`text-left bg-gray-800 border ${selectedTutorial === tutorial ? 'border-blue-400 shadow-xl' : 'border-gray-700 hover:border-gray-500'} rounded-2xl overflow-hidden shadow-lg transition-all flex flex-col focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                >
+                  <div className="relative h-40 w-full overflow-hidden bg-gray-900 border-b border-gray-700">
+                    <div className="absolute top-3 left-3 z-20 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold border border-gray-600 bg-gray-900 bg-opacity-80 text-gray-200 shadow">
+                      <Bot className="w-3 h-3 text-orange-300" />
+                      <span>{tutorial.category}</span>
+                    </div>
+                    <img 
+                      src={tutorial.image} 
+                      alt={tutorial.title}
+                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent opacity-60"></div>
                   </div>
-                  <img 
-                    src={tutorial.image} 
-                    alt={tutorial.title}
-                    className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent opacity-60"></div>
-                </div>
 
-                <div className="p-6 flex-1 flex flex-col">
+                  <div className="p-5 flex-1 flex flex-col">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-lg font-bold text-white leading-tight">{tutorial.title}</h3>
+                      <div className="bg-gray-900 p-1.5 rounded-lg border border-gray-700">
+                        <ArrowRight className="w-4 h-4 text-gray-400" />
+                      </div>
+                    </div>
+                    <p className="text-sm mt-3 leading-relaxed" style={{ color: colors.textGray }}>
+                      {tutorial.summary}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl">
+              {selectedTutorial ? (
+                <>
                   <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-lg font-bold text-white leading-tight">{tutorial.title}</h3>
-                    <div className="bg-gray-900 p-1.5 rounded-lg border border-gray-700">
-                      <ArrowRight className="w-4 h-4 text-gray-400" />
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: colors.brandBlue }}>
+                        {selectedTutorial.category}
+                      </p>
+                      <h3 className="text-2xl font-bold text-white mt-1">{selectedTutorial.title}</h3>
+                    </div>
+                    <div className="bg-gray-800 border border-gray-700 rounded-xl p-2">
+                      <Bot className="w-5 h-5 text-orange-300" />
                     </div>
                   </div>
-                  <p className="text-sm mt-3 leading-relaxed" style={{ color: colors.textGray }}>
-                    {tutorial.summary}
+
+                  <div className="mt-4 rounded-xl overflow-hidden border border-gray-800">
+                    <img 
+                      src={selectedTutorial.image}
+                      alt={selectedTutorial.title}
+                      className="w-full h-44 object-cover"
+                    />
+                  </div>
+
+                  <p className="mt-4 text-sm leading-relaxed" style={{ color: colors.textGray }}>
+                    {selectedTutorial.summary}
                   </p>
 
-                  <ul className="mt-4 space-y-2 text-sm" style={{ color: colors.textLight }}>
-                    {tutorial.deliverables.map((item, i) => (
-                      <li key={i} className="flex gap-2">
-                        <span className="text-blue-400">•</span>
-                        <span className="text-gray-300">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-5">
+                    <p className="text-sm font-semibold text-gray-200 mb-2">What you get</p>
+                    <ul className="space-y-2 text-sm" style={{ color: colors.textLight }}>
+                      {selectedTutorial.deliverables.map((item, i) => (
+                        <li key={i} className="flex gap-2">
+                          <span className="text-blue-400">•</span>
+                          <span className="text-gray-300">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-                  <div className="mt-4 bg-gray-900 border border-gray-700 rounded-lg p-3">
+                  <div className="mt-5 bg-gray-800 border border-gray-700 rounded-lg p-3">
                     <p className="text-xs font-semibold text-gray-400 mb-2">Starter code</p>
                     <pre className="text-xs text-gray-200 whitespace-pre-wrap leading-relaxed">
-{tutorial.code}
+{selectedTutorial.code}
                     </pre>
                   </div>
+                </>
+              ) : (
+                <div className="text-center text-gray-400">
+                  <p>Select a tutorial to view details, deliverables, and starter code.</p>
                 </div>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
+
         </div>
       </section>
 
