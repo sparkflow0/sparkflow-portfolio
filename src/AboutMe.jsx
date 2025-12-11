@@ -202,7 +202,15 @@ const AboutMe = ({ navigate }) => {
       <main className="pt-28 pb-16">
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-3 gap-10 items-center">
-            <div className="lg:col-span-2 space-y-4">
+            <div className="order-1 lg:order-2 flex justify-center">
+              <div className="relative flex justify-center">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-500/10 via-orange-500/10 to-transparent blur-3xl" />
+                <div className="relative h-56 w-56 rounded-3xl overflow-hidden border-2 border-gray-700 shadow-2xl bg-gray-900">
+                  <img src="/eng-mohammed-al-mehaiza.jpg" alt="Eng. Mohammed Jassim Al Mehaiza" className="w-full h-full object-cover" />
+                </div>
+              </div>
+            </div>
+            <div className="lg:col-span-2 order-2 lg:order-1 space-y-4">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-gray-800 text-sm text-gray-200">
                 <ShieldCheck className="w-4 h-4" style={{ color: colors.brandOrange }} />
                 Eng. Mohammed Jassim Al Mehaiza
@@ -229,12 +237,6 @@ const AboutMe = ({ navigate }) => {
                     <span className="text-sm">{c.label}</span>
                   </a>
                 ))}
-              </div>
-            </div>
-            <div className="relative flex justify-center">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-500/10 via-orange-500/10 to-transparent blur-3xl" />
-              <div className="relative h-56 w-56 rounded-3xl overflow-hidden border-2 border-gray-700 shadow-2xl bg-gray-900">
-                <img src="/eng-mohammed-al-mehaiza.jpg" alt="Eng. Mohammed Jassim Al Mehaiza" className="w-full h-full object-cover" />
               </div>
             </div>
           </div>
