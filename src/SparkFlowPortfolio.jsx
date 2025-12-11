@@ -54,8 +54,8 @@ const SparkFlowPortfolio = () => {
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-8">
               <a href="#home" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Home</a>
-              <a href="#stats" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Impact</a>
               <a href="/tutorials" data-spa-link className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Tutorials</a>
+              <a href="/about" data-spa-link className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">About Me</a>
               <a href="#projects" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Portfolio</a>
               <a href="#contact" className="bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full text-sm font-medium transition-all" style={{ backgroundColor: colors.brandOrange, color: colors.textLight }}>
                 Contact Us

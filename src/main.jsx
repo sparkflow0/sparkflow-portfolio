@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import SparkFlowPortfolio from './SparkFlowPortfolio.jsx';
 import TutorialsPage from './TutorialsPage.jsx';
+import AboutMe from './AboutMe.jsx';
 import './index.css';
 
 const AppRouter = () => {
@@ -31,6 +32,9 @@ const AppRouter = () => {
     window.scrollTo(0, 0);
   };
 
+  if (path.startsWith('/about')) {
+    return <AboutMe navigate={navigate} />;
+  }
   if (path.startsWith('/tutorials')) {
     return <TutorialsPage navigate={navigate} />;
   }

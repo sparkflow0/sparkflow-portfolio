@@ -95,6 +95,14 @@ const TutorialsPage = ({ navigate }) => {
                   Home
                 </a>
                 <a
+                  href="/about"
+                  data-spa-link
+                  className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  onClick={(e) => { e.preventDefault(); handleNavigate('/about'); }}
+                >
+                  About Me
+                </a>
+                <a
                   href="/tutorials"
                   className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors text-white"
                   aria-current="page"
