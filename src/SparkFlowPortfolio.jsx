@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { 
   Cpu, 
   Eye, 
@@ -22,19 +22,14 @@ import {
   Phone,
   Wrench
 } from 'lucide-react';
-
-const slugify = (str) => str
-  .toLowerCase()
-  .replace(/[^a-z0-9]+/g, '-')
-  .replace(/(^-|-$)/g, '');
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const SparkFlowPortfolio = () => {
   const [filter, setFilter] = useState('All');
-  const [tutorialFilter, setTutorialFilter] = useState('All');
-  const [selectedTutorial, setSelectedTutorial] = useState(null);
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'tutorial-detail'
   const [activeVideo, setActiveVideo] = useState(null);
-  const tutorialDetailRef = useRef(null);
+  const [exporting, setExporting] = useState(false);
+  const portfolioRef = useRef(null);
 
   const colors = {
     brandBlue: '#4DA9E2',
@@ -55,13 +50,13 @@ const SparkFlowPortfolio = () => {
                 alt="SparkFlow logo" 
                 className="h-12 w-auto"
               />
-            </div>
+          </div>
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-8">
-              <a href="#home" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors" onClick={() => setViewMode('list')}>Home</a>
-              <a href="#stats" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors" onClick={() => setViewMode('list')}>Impact</a>
-              <a href="#tutorials" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors" onClick={() => { setViewMode('list'); window.location.hash = '#tutorials'; }}>Tutorials</a>
-              <a href="#projects" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors" onClick={() => setViewMode('list')}>Portfolio</a>
+              <a href="#home" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Home</a>
+              <a href="#stats" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Impact</a>
+              <a href="/tutorials" data-spa-link className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Tutorials</a>
+              <a href="#projects" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Portfolio</a>
               <a href="#contact" className="bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full text-sm font-medium transition-all" style={{ backgroundColor: colors.brandOrange, color: colors.textLight }}>
                 Contact Us
               </a>
@@ -72,864 +67,91 @@ const SparkFlowPortfolio = () => {
     </nav>
   );
 
+  const loadImageAsDataUrl = async (url) => {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const exportAsPdf = async () => {
+    if (!portfolioRef.current) return;
+    setExporting(true);
+    try {
+      const canvas = await html2canvas(portfolioRef.current, { 
+        scale: 2, 
+        useCORS: true, 
+        scrollY: -window.scrollY,
+        backgroundColor: colors.darkBg 
+      });
+      const photoData = await loadImageAsDataUrl('/eng-mohammed-al-mehaiza.jpg');
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      // Header with photo and credit
+      const headerY = 12;
+      pdf.addImage(photoData, 'JPEG', 10, headerY, 22, 22);
+      pdf.setFontSize(14);
+      pdf.setTextColor(20, 20, 20);
+      pdf.text('All projects developed by Eng. Mohammed Jassim Al Mehaiza.', 36, headerY + 14, { maxWidth: pageWidth - 46 });
+
+      const margin = 10;
+      const imgWidth = pageWidth - margin * 2;
+      const availableHeight = pageHeight - (headerY + 26) - margin; // space for header + bottom margin
+
+      const pxPerMm = canvas.width / imgWidth;
+      const pageHeightPx = availableHeight * pxPerMm;
+
+      const addHeader = () => {
+        pdf.addImage(photoData, 'JPEG', margin, headerY, 22, 22);
+        pdf.setFontSize(14);
+        pdf.setTextColor(20, 20, 20);
+        pdf.text('All projects developed by Eng. Mohammed Jassim Al Mehaiza.', margin + 26, headerY + 14, {
+          maxWidth: pageWidth - margin * 2 - 26
+        });
+      };
+
+      let sliceY = 0;
+      addHeader();
+
+      while (sliceY < canvas.height) {
+        const sliceHeightPx = Math.min(pageHeightPx, canvas.height - sliceY);
+
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = sliceHeightPx;
+        const ctx = sliceCanvas.getContext('2d');
+        ctx.drawImage(canvas, 0, sliceY, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
+
+        const sliceImg = sliceCanvas.toDataURL('image/png');
+        const sliceHeightMm = (sliceHeightPx / canvas.width) * imgWidth;
+
+        pdf.addImage(sliceImg, 'PNG', margin, headerY + 26, imgWidth, sliceHeightMm);
+
+        sliceY += sliceHeightPx;
+        if (sliceY < canvas.height) {
+          pdf.addPage();
+          addHeader();
+        }
+      }
+
+      pdf.save('sparkflow-portfolio.pdf');
+    } catch (err) {
+      console.error('PDF export failed', err);
+      alert('Unable to export PDF. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Categories for filtering
   const categories = ['All', 'AI & CV', 'IoT & Automation', 'Robotics', 'Web & Apps'];
-  const tutorialCategories = ['All', 'Raspberry Pi', 'Arduino', 'OpenCV', 'TensorFlow', 'Python', 'IoT', 'AI & Agentic'];
-
-  const tutorials = [
-    // Raspberry Pi (7)
-    {
-      title: 'Edge Vision Guard with Raspberry Pi',
-      category: 'Raspberry Pi',
-      summary: 'Deploy a Pi 4 as an edge NVR that flags intrusions with OpenCV motion masking and GPIO siren triggers. Covers RTSP ingestion, frame differencing, and saving incident clips.',
-      image: 'https://placehold.co/600x340/111827/4DA9E2?text=Raspberry+Pi+Edge+Guard',
-      code: `python
-import cv2
-cap = cv2.VideoCapture("rtsp://camera/stream")
-_, bg = cap.read()
-while True:
-    ok, frame = cap.read()
-    if not ok:
-        break
-    mask = cv2.absdiff(bg, frame)
-    _, binary = cv2.threshold(cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY), 35, 255, cv2.THRESH_BINARY)
-    if cv2.countNonZero(binary) > 12000:
-        print("intrusion detected")
-`,
-      deliverables: [
-        'Block diagram screenshot of camera → Pi → siren wiring',
-        'Annotated motion heatmap PNG samples',
-        'Starter Python script to trigger GPIO alarms'
-      ]
-    },
-    {
-      title: 'Smart Garden Pi Hub',
-      category: 'Raspberry Pi',
-      summary: 'Use Raspberry Pi + InfluxDB + Grafana stack to visualize soil moisture, light, and temperature. Includes wiring DHT22/Capacitive sensors and serving dashboards on LAN.',
-      image: 'https://placehold.co/600x340/1F2937/f17a1e?text=Pi+Garden+Hub',
-      code: `bash
-# systemd service to run the collector
-[Service]
-ExecStart=/usr/bin/python3 /home/pi/garden/read_sensors.py
-Restart=always
-`,
-      deliverables: [
-        'Grafana dashboard screenshot with time-series panels',
-        'Python collector script with influx line protocol',
-        'Wiring image for DHT22 and moisture probes'
-      ]
-    },
-    {
-      title: 'Pi Time-lapse Plant Monitor',
-      category: 'Raspberry Pi',
-      summary: 'Capture growth time-lapses using Pi Camera HQ and cron. Add overlays for humidity and light readings and publish MP4 to a shared NAS.',
-      image: 'https://placehold.co/600x340/0f172a/4DA9E2?text=Pi+Timelapse',
-      code: `bash
-*/5 * * * * /usr/bin/python3 /home/pi/cam/timelapse.py --exposure auto
-`,
-      deliverables: [
-        'Sample time-lapse frame with sensor overlay',
-        'Camera rig photo showing tripod and diffuser',
-        'Cron entry and ffmpeg stitch command'
-      ]
-    },
-    {
-      title: 'Retail Kiosk on Pi + Chromium',
-      category: 'Raspberry Pi',
-      summary: 'Lock down a Pi to run a branded kiosk in full screen with remote updates. Configure auto-login, disable screen blanking, and add watchdog for the web app.',
-      image: 'https://placehold.co/600x340/111827/f17a1e?text=Pi+Kiosk',
-      code: `bash
-@reboot /usr/bin/chromium-browser --kiosk https://store.local --incognito --autoplay-policy=no-user-gesture-required
-`,
-      deliverables: [
-        'Photo of kiosk enclosure with mounted Pi',
-        'systemd unit for kiosk-launch and restart logic',
-        'Checklist screenshot for lockdown settings'
-      ]
-    },
-    {
-      title: 'Air-Quality Sentinel with Pi Sense HAT',
-      category: 'Raspberry Pi',
-      summary: 'Build an indoor AQ monitor using Pi Sense HAT to log temperature, humidity, pressure, and eCO2 estimates. Push alerts to Slack when thresholds spike.',
-      image: 'https://placehold.co/600x340/1F2937/4DA9E2?text=Pi+Air+Quality',
-      code: `python
-from sense_hat import SenseHat
-import requests
-sense = SenseHat()
-temp = sense.get_temperature()
-if temp > 30:
-    requests.post(WEBHOOK, json={"text": "Room overheating"})
-`,
-      deliverables: [
-        'Sense HAT orientation photo and pinout',
-        'Grafana-style screenshot of AQI trends',
-        'Slack webhook snippet for instant alerts'
-      ]
-    },
-    {
-      title: 'LoRa Backhaul Gateway on Pi',
-      category: 'Raspberry Pi',
-      summary: 'Turn a Pi + SX1302 hat into a LoRaWAN gateway for remote fields. Configure packet forwarder, ChirpStack, and a local Prometheus exporter.',
-      image: 'https://placehold.co/600x340/0f172a/f17a1e?text=Pi+LoRa+Gateway',
-      code: `bash
-sudo systemctl enable chirpstack-concentratord
-sudo systemctl enable chirpstack-gateway-bridge
-sudo systemctl enable chirpstack-network-server
-sudo systemctl enable chirpstack-application-server
-`,
-      deliverables: [
-        'Topology diagram screenshot for node → gateway → server',
-        'ChirpStack console image showing uplinks',
-        'Config files for region and channel plan'
-      ]
-    },
-    {
-      title: 'Pi Classroom Lab Kit',
-      category: 'Raspberry Pi',
-      summary: 'Prepare SD card images with VS Code, GPIO demos, and SSH keys for a 10-seat lab. Includes checklist for cloning, hostname stamping, and Wi‑Fi onboarding.',
-      image: 'https://placehold.co/600x340/111827/4DA9E2?text=Pi+Lab+Kit',
-      code: `bash
-for i in {01..10}; do
-  sudo ./pi-clone /dev/sda /dev/sd\${i}
-  sudo raspi-config nonint do_hostname "lab-pi-\${i}"
-done
-`,
-      deliverables: [
-        'Imager settings screenshot for base OS',
-        'Printed quickstart sheet PDF preview',
-        'Automation script for hostnames and SSH keys'
-      ]
-    },
-
-    // Arduino (7)
-    {
-      title: 'Arduino Smart Irrigation Shield',
-      category: 'Arduino',
-      summary: 'Drive relays for pumps based on soil moisture and schedule. Calibrate analog sensors, debounce floats, and fail-safe close valves on brownouts.',
-      image: 'https://placehold.co/600x340/1F2937/4DA9E2?text=Arduino+Irrigation',
-      code: `cpp
-int soil = analogRead(A0);
-if (soil < 480) {
-  digitalWrite(RELAY_PIN, HIGH);
-}
-`,
-      deliverables: [
-        'Wiring schematic screenshot with relays and pump',
-        'Serial plotter image of moisture calibration',
-        'Arduino sketch with moisture thresholds'
-      ]
-    },
-    {
-      title: 'Wearable Gesture Band',
-      category: 'Arduino',
-      summary: 'Use an Arduino Nano + MPU6050 to capture gestures and trigger Bluetooth HID events. Smooth data with a complementary filter and emit keystrokes.',
-      image: 'https://placehold.co/600x340/0f172a/f17a1e?text=Gesture+Band',
-      code: `cpp
-Vector norm = mpu.readNormalizeGyro();
-float roll = roll + norm.XAxis * 0.1;
-if (roll > 35) Keyboard.write('N');
-`,
-      deliverables: [
-        'Fritzing diagram screenshot of MPU6050 wiring',
-        'Serial plot screenshot showing smoothed roll/pitch',
-        'HID profile code for keyboard shortcuts'
-      ]
-    },
-    {
-      title: 'Autonomous Line-Follow Rover',
-      category: 'Arduino',
-      summary: 'Calibrate IR reflectance sensors and PID-tune a two-wheel rover to follow lines and handle junctions. Add buzzer feedback and OLED HUD.',
-      image: 'https://placehold.co/600x340/111827/4DA9E2?text=Line+Follow+Rover',
-      code: `cpp
-float error = target - sensorValue;
-float control = kp*error + ki*sumErr + kd*(error-lastErr);
-motorLeft.write(base + control);
-`,
-      deliverables: [
-        'Track layout photo with tape lines',
-        'PID tuning chart screenshot',
-        'Arduino sketch for sensor calibration'
-      ]
-    },
-    {
-      title: 'Greenhouse Climate Node',
-      category: 'Arduino',
-      summary: 'Combine DHT22 and relay bank to control fans and heaters. Add LCD menu for manual override and EEPROM presets for summer/winter.',
-      image: 'https://placehold.co/600x340/1F2937/f17a1e?text=Climate+Node',
-      code: `cpp
-if (humidity > 75) digitalWrite(FAN_RELAY, HIGH);
-if (temp < 18) digitalWrite(HEATER_RELAY, HIGH);
-`,
-      deliverables: [
-        'Panel photo with labeled relays',
-        'LCD menu screenshot for mode switching',
-        'EEPROM profile code snippet'
-      ]
-    },
-    {
-      title: 'LED Cube Animator',
-      category: 'Arduino',
-      summary: 'Solder and drive an 4x4x4 LED cube with multiplexing. Create animation frames and author a mini DSL to choreograph patterns.',
-      image: 'https://placehold.co/600x340/0f172a/4DA9E2?text=LED+Cube',
-      code: `cpp
-byte cube[4][4] = { /* frames */ };
-for (int z=0; z<4; z++) {
-  shiftOut(dataPin, clockPin, MSBFIRST, cube[z][row]);
-}
-`,
-      deliverables: [
-        'Cube wiring diagram screenshot',
-        'Animation timeline image',
-        'Arduino code for frame sequencing'
-      ]
-    },
-    {
-      title: 'MIDI Synth Shield',
-      category: 'Arduino',
-      summary: 'Read MIDI over UART and generate tones with the Mozzi synth library. Add potentiometer filters and OLED patch selector.',
-      image: 'https://placehold.co/600x340/111827/f17a1e?text=MIDI+Synth',
-      code: `cpp
-if (mozziAnalogRead(POT_PIN) > 600) currentPatch = 2;
-if (Serial.available()) handleMidi(Serial.read());
-`,
-      deliverables: [
-        'Breadboard photo with DIN MIDI jack',
-        'OLED patch menu screenshot',
-        'Example MIDI-to-audio Arduino sketch'
-      ]
-    },
-    {
-      title: 'Energy Meter Logger',
-      category: 'Arduino',
-      summary: 'Use a non-invasive CT clamp to log AC current, compute RMS, and send readings over RS485/Modbus to a Pi gateway.',
-      image: 'https://placehold.co/600x340/1F2937/4DA9E2?text=Energy+Logger',
-      code: `cpp
-double amps = emon.calcIrms(1480);
-modbus.writeSingleRegister(0x0001, (int)(amps*100));
-`,
-      deliverables: [
-        'Scope screenshot showing CT waveform',
-        'Calibration spreadsheet screenshot',
-        'Modbus register map snippet'
-      ]
-    },
-
-    // OpenCV (7)
-    {
-      title: 'Mask Detection with OpenCV',
-      category: 'OpenCV',
-      summary: 'Build a face-mask detector using Haar cascades and overlay compliance badges. Export annotated frames and trigger GPIO when violations occur.',
-      image: 'https://placehold.co/600x340/111827/4DA9E2?text=OpenCV+Mask+Detector',
-      code: `python
-faces = detector.detectMultiScale(gray, 1.1, 4)
-for x,y,w,h in faces:
-    roi = gray[y:y+h, x:x+w]
-    if model.predict(roi) == 0:
-        cv2.putText(frame, "Mask", (x,y-10), font, 0.8, (0,255,0), 2)
-`,
-      deliverables: [
-        'Annotated screenshot with mask/no-mask labels',
-        'Confusion matrix image for validation set',
-        'Python script using Haar + simple CNN'
-      ]
-    },
-    {
-      title: 'Multi-Object Tracker with Kalman + SORT',
-      category: 'OpenCV',
-      summary: 'Detect and track pedestrians with YOLOv8 and SORT to assign IDs. Handle occlusions and visualize motion trails.',
-      image: 'https://placehold.co/600x340/1F2937/f17a1e?text=OpenCV+Tracker',
-      code: `python
-tracks = mot_tracker.update(detections)
-for x1,y1,x2,y2,tid in tracks:
-    cv2.rectangle(frame, (x1,y1), (x2,y2), color_map(tid), 2)
-`,
-      deliverables: [
-        'Video frame screenshot with colored IDs',
-        'Graph showing FPS vs resolution',
-        'Tracking notebook with evaluation metrics'
-      ]
-    },
-    {
-      title: 'Lane Detection for Mini-RC',
-      category: 'OpenCV',
-      summary: 'Process dashcam feeds to detect road lanes using Canny + Hough transform. Convert to steering commands and publish to MQTT.',
-      image: 'https://placehold.co/600x340/0f172a/4DA9E2?text=Lane+Detection',
-      code: `python
-edges = cv2.Canny(gray, 50, 150)
-lines = cv2.HoughLinesP(edges, 1, np.pi/180, 40, minLineLength=50, maxLineGap=10)
-`,
-      deliverables: [
-        'Overlay screenshot with detected lane lines',
-        'Steering chart image comparing PID output',
-        'MQTT topic map for steering commands'
-      ]
-    },
-    {
-      title: 'Barcode & QR Scanner',
-      category: 'OpenCV',
-      summary: 'Build a checkout-ready scanner using OpenCV + pyzbar, highlighting bounding boxes and pushing scans to a REST endpoint.',
-      image: 'https://placehold.co/600x340/111827/f17a1e?text=Barcode+Scanner',
-      code: `python
-from pyzbar.pyzbar import decode
-codes = decode(frame)
-for c in codes:
-    cv2.rectangle(frame, c.rect, (0,255,0), 2)
-`,
-      deliverables: [
-        'Frame screenshot with decoded QR text overlay',
-        'HTTP request example for posting scans',
-        'USB camera setup photo'
-      ]
-    },
-    {
-      title: 'Motion-Triggered CCTV DVR',
-      category: 'OpenCV',
-      summary: 'Use background subtraction to detect motion and record clips with pre/post buffers. Email snapshots and prune archive automatically.',
-      image: 'https://placehold.co/600x340/1F2937/4DA9E2?text=Motion+DVR',
-      code: `python
-fgmask = backSub.apply(frame)
-if cv2.countNonZero(fgmask) > 8000:
-    writer.write(frame)
-`,
-      deliverables: [
-        'Screenshot of masked motion regions',
-        'Folder snapshot showing clipped MP4s',
-        'Email alert template with inline JPG'
-      ]
-    },
-    {
-      title: 'AR Marker Overlay with ArUco',
-      category: 'OpenCV',
-      summary: 'Detect ArUco markers and overlay 3D cubes for AR signage. Calibrate camera matrices and export printable marker sheets.',
-      image: 'https://placehold.co/600x340/0f172a/f17a1e?text=ArUco+Overlay',
-      code: `python
-corners, ids, _ = cv2.aruco.detectMarkers(gray, dictionary)
-cv2.aruco.drawAxis(frame, cameraMatrix, distCoeffs, rvec, tvec, 0.05)
-`,
-      deliverables: [
-        'Frame screenshot with 3D cube overlay',
-        'Marker sheet PDF preview',
-        'Calibration chessboard image and YAML'
-      ]
-    },
-    {
-      title: 'Pose Estimation Fitness Coach',
-      category: 'OpenCV',
-      summary: 'Use MediaPipe pose to count reps for squats and pushups. Display angle calculations and audio cues for bad form.',
-      image: 'https://placehold.co/600x340/111827/4DA9E2?text=Pose+Coach',
-      code: `python
-angle = calculate_angle(hip, knee, ankle)
-if angle < 80 and direction == "down":
-    count += 1
-`,
-      deliverables: [
-        'Overlay screenshot with joint angles',
-        'CSV export screenshot of workout logs',
-        'Audio cue code snippet using playsound'
-      ]
-    },
-
-    // TensorFlow (7)
-    {
-      title: 'TF Lite Edge Image Classifier',
-      category: 'TensorFlow',
-      summary: 'Train a custom image classifier and convert to TF Lite for Pi/Android deployment. Benchmark with tflite-runtime and coral acceleration.',
-      image: 'https://placehold.co/600x340/1F2937/4DA9E2?text=TFLite+Classifier',
-      code: `python
-converter = tf.lite.TFLiteConverter.from_saved_model("model")
-converter.optimizations = [tf.lite.Optimize.DEFAULT]
-open("model.tflite","wb").write(converter.convert())
-`,
-      deliverables: [
-        'Confusion matrix screenshot',
-        'Benchmark table image FPS vs quantization',
-        'Sample inference script on Raspberry Pi'
-      ]
-    },
-    {
-      title: 'Object Detection with TF OD API',
-      category: 'TensorFlow',
-      summary: 'Use TensorFlow Object Detection API to fine-tune SSD on a custom dataset. Export frozen graphs, run on GPU, and view detections with label maps.',
-      image: 'https://placehold.co/600x340/0f172a/f17a1e?text=TF+Object+Detection',
-      code: `python
-pipeline_config = "ssd_mobilenet_v2.config"
-model_dir = "exported-model"
-model_main_tf2 --pipeline_config_path=$pipeline_config --model_dir=$model_dir
-`,
-      deliverables: [
-        'TensorBoard screenshot of mAP improving',
-        'Detection overlay image with labels',
-        'Exported label_map.pbtxt sample'
-      ]
-    },
-    {
-      title: 'Text Sentiment Classifier',
-      category: 'TensorFlow',
-      summary: 'Tokenize reviews with Keras TextVectorization, train an LSTM sentiment model, and serve via FastAPI with batching.',
-      image: 'https://placehold.co/600x340/111827/4DA9E2?text=TF+Sentiment',
-      code: `python
-vectorizer = TextVectorization(max_tokens=20000, output_sequence_length=200)
-model = Sequential([vectorizer, Embedding(20000, 64), LSTM(64), Dense(1, activation='sigmoid')])
-`,
-      deliverables: [
-        'ROC curve screenshot',
-        'FastAPI route code for /predict',
-        'Postman screenshot testing payload'
-      ]
-    },
-    {
-      title: 'Time-Series Forecast with LSTM',
-      category: 'TensorFlow',
-      summary: 'Forecast energy load using sliding windows and stacked LSTMs. Evaluate MAPE and export ONNX for deployment.',
-      image: 'https://placehold.co/600x340/1F2937/f17a1e?text=TF+Forecast',
-      code: `python
-dataset = tf.keras.preprocessing.timeseries_dataset_from_array(series[:-lookahead], series[lookahead:], sequence_length=48)
-model = Sequential([LSTM(128), Dense(1)])
-`,
-      deliverables: [
-        'Prediction vs actual plot screenshot',
-        'ONNX export command snippet',
-        'Notebook snippet for window generator'
-      ]
-    },
-    {
-      title: 'Recommender with Embeddings',
-      category: 'TensorFlow',
-      summary: 'Create a retrieval + ranking recommender using TensorFlow Recommenders with user/item embeddings and evaluate top-K accuracy.',
-      image: 'https://placehold.co/600x340/0f172a/4DA9E2?text=TF+Recsys',
-      code: `python
-user_model = tf.keras.Sequential([tf.keras.layers.StringLookup(vocabulary=users), tf.keras.layers.Embedding(len(users)+1, 32)])
-task = tfrs.tasks.Retrieval(metrics=tfrs.metrics.FactorizedTopK(candidates=item_ds))
-`,
-      deliverables: [
-        'Embedding projector screenshot',
-        'Top-K evaluation table image',
-        'SavedModel export snippet'
-      ]
-    },
-    {
-      title: 'GAN for Synthetic PCB Images',
-      category: 'TensorFlow',
-      summary: 'Train a DCGAN to generate PCB-like images for augmentation. Visualize training with grid outputs every N epochs.',
-      image: 'https://placehold.co/600x340/111827/f17a1e?text=TF+GAN',
-      code: `python
-noise = tf.random.normal([batch_size, 100])
-generated = generator(noise, training=True)
-disc_loss = cross_entropy(real_output, generated_output)
-`,
-      deliverables: [
-        'Epoch grid screenshot of generated boards',
-        'Training loss chart',
-        'Inference script to sample new boards'
-      ]
-    },
-    {
-      title: 'Transfer Learning with EfficientNet',
-      category: 'TensorFlow',
-      summary: 'Fine-tune EfficientNet-B0 on a 10-class dataset with mixed precision. Add early stopping, cosine decay, and export TF Lite.',
-      image: 'https://placehold.co/600x340/1F2937/4DA9E2?text=TF+Transfer+Learning',
-      code: `python
-base = tf.keras.applications.EfficientNetB0(include_top=False, pooling='avg')
-model = tf.keras.Sequential([base, tf.keras.layers.Dense(10, activation='softmax')])
-`,
-      deliverables: [
-        'Training curves screenshot',
-        'TF Lite conversion command',
-        'Inference notebook cell preview'
-      ]
-    },
-
-    // Python (7)
-    {
-      title: 'FastAPI IoT Command Center',
-      category: 'Python',
-      summary: 'Build a FastAPI backend with JWT auth, MQTT bridge, and device registry. Ship with Docker Compose and Pydantic validation.',
-      image: 'https://placehold.co/600x340/0f172a/4DA9E2?text=FastAPI+IoT',
-      code: `python
-@app.post("/devices/{id}/command")
-async def command(id: str, cmd: Command):
-    await mqtt.publish(f"devices/{id}/cmd", cmd.json())
-    return {"status": "queued"}
-`,
-      deliverables: [
-        'OpenAPI docs screenshot',
-        'Docker Compose YAML excerpt',
-        'Sample MQTT bridge Python script'
-      ]
-    },
-    {
-      title: 'Data Pipeline with Pandas + Airflow',
-      category: 'Python',
-      summary: 'Create an ETL pipeline that ingests CSV/JSON, cleans with pandas, and schedules DAGs in Airflow. Add data-quality checks with Great Expectations.',
-      image: 'https://placehold.co/600x340/111827/f17a1e?text=Python+ETL',
-      code: `python
-with DAG('etl', schedule='@hourly') as dag:
-    extract = PythonOperator(task_id='extract', python_callable=fetch_raw)
-    transform = PythonOperator(task_id='transform', python_callable=clean_dataset)
-`,
-      deliverables: [
-        'Airflow graph view screenshot',
-        'Great Expectations data docs preview',
-        'Sample pandas cleaning notebook'
-      ]
-    },
-    {
-      title: 'Streamlit ML Dashboard',
-      category: 'Python',
-      summary: 'Serve a live model dashboard with Streamlit including upload, prediction, and SHAP plots. Containerize and add secrets via .env.',
-      image: 'https://placehold.co/600x340/1F2937/4DA9E2?text=Streamlit+Dashboard',
-      code: `python
-uploaded = st.file_uploader("Upload CSV")
-if uploaded:
-    df = pd.read_csv(uploaded)
-    st.pyplot(shap.plots.waterfall(explainer(df.iloc[0])))
-`,
-      deliverables: [
-        'Dashboard screenshot with SHAP chart',
-        'Dockerfile snippet for Streamlit',
-        'Sample .env template for keys'
-      ]
-    },
-    {
-      title: 'Web Scraping Playbook',
-      category: 'Python',
-      summary: 'Use Playwright to scrape dynamic sites, store to SQLite, and expose data via a small Flask API. Handle rotating proxies and retries.',
-      image: 'https://placehold.co/600x340/0f172a/f17a1e?text=Python+Scraper',
-      code: `python
-async with async_playwright() as p:
-    browser = await p.chromium.launch(headless=True)
-    page = await browser.new_page()
-    await page.goto(url, wait_until="networkidle")
-`,
-      deliverables: [
-        'ERD screenshot of scraped tables',
-        'Playwright timeline screenshot',
-        'Flask route sample for paginated results'
-      ]
-    },
-    {
-      title: 'Async MQTT Fleet Manager',
-      category: 'Python',
-      summary: 'Monitor 100+ devices with asyncio-mqtt, store heartbeats, and trigger alerts on stale nodes. Add retry backoff and structured logging.',
-      image: 'https://placehold.co/600x340/111827/4DA9E2?text=MQTT+Fleet',
-      code: `python
-async with Client(BROKER) as client:
-    async with client.filtered_messages("devices/+/heartbeat") as messages:
-        await client.subscribe("devices/+/heartbeat")
-        async for message in messages:
-            log_heartbeat(message.topic, message.payload)
-`,
-      deliverables: [
-        'Grafana screenshot for heartbeat counts',
-        'Log sample with correlation IDs',
-        'Alertmanager route config snippet'
-      ]
-    },
-    {
-      title: 'Automation CLI with Typer',
-      category: 'Python',
-      summary: 'Ship a CLI toolbox for devops tasks using Typer. Add subcommands for backups, deploys, and linting with rich progress bars.',
-      image: 'https://placehold.co/600x340/1F2937/f17a1e?text=Python+CLI',
-      code: `python
-@app.command()
-def deploy(env: str):
-    spinner = Progress(SpinnerColumn(), TextColumn("{task.description}"))
-    ...
-`,
-      deliverables: [
-        'Terminal screenshot of CLI help',
-        'Publish script to PyPI test index',
-        'Example config file for environments'
-      ]
-    },
-    {
-      title: 'Testing Pyramid Workshop',
-      category: 'Python',
-      summary: 'Set up pytest with unit, integration, and end-to-end layers. Add fixtures for temporary files, httpx mocks, and coverage thresholds.',
-      image: 'https://placehold.co/600x340/0f172a/4DA9E2?text=Python+Testing',
-      code: `python
-@pytest.fixture
-def client():
-    with TestClient(app) as c:
-        yield c
-`,
-      deliverables: [
-        'Coverage report screenshot',
-        'Sample failing test output image',
-        'pytest.ini snippet enforcing min coverage'
-      ]
-    },
-
-    // IoT (7)
-    {
-      title: 'MQTT Mesh for Campus Sensors',
-      category: 'IoT',
-      summary: 'Design a multi-hop MQTT mesh using ESP32 + Wi-Fi, bridging to a Pi broker with TLS. Includes topic design and offline buffering.',
-      image: 'https://placehold.co/600x340/111827/f17a1e?text=MQTT+Mesh',
-      code: `bash
-mosquitto_pub -h broker.local -t "campus/node42/temp" -m 23.1 --cafile ca.crt --cert node.crt --key node.key
-`,
-      deliverables: [
-        'Network diagram screenshot with hops',
-        'Mosquitto ACL file snippet',
-        'ESP32 buffering code for outages'
-      ]
-    },
-    {
-      title: 'ESPHome Smart Lighting',
-      category: 'IoT',
-      summary: 'Flash ESPHome firmware to control relays and dimmers, integrate with Home Assistant, and add sunrise/sunset automations.',
-      image: 'https://placehold.co/600x340/1F2937/4DA9E2?text=ESPHome+Lighting',
-      code: `yaml
-switch:
-  - platform: gpio
-    pin: 5
-    name: "Ceiling Light"
-`,
-      deliverables: [
-        'Home Assistant dashboard screenshot',
-        'Wiring image for AC relay safety',
-        'ESPHome YAML sample with effects'
-      ]
-    },
-    {
-      title: 'OTA Update Pipeline',
-      category: 'IoT',
-      summary: 'Create an OTA server for ESP32/STM32 nodes using HTTPS, signed binaries, and staged rollouts. Monitor success metrics.',
-      image: 'https://placehold.co/600x340/0f172a/f17a1e?text=OTA+Pipeline',
-      code: `bash
-curl -X POST https://ota.local/upload -F firmware=@firmware.bin -F channel=beta
-`,
-      deliverables: [
-        'OTA dashboard screenshot showing rollout',
-        'Signing key generation steps',
-        'Device-side code for version checks'
-      ]
-    },
-    {
-      title: 'Edge-to-Cloud with AWS IoT Core',
-      category: 'IoT',
-      summary: 'Provision certificates, attach policies, and stream telemetry to AWS IoT Core, then route to DynamoDB with rules engine.',
-      image: 'https://placehold.co/600x340/111827/4DA9E2?text=AWS+IoT+Core',
-      code: `bash
-aws iot create-thing --thing-name rover-01
-aws iot attach-thing-principal --principal $CERT --thing-name rover-01
-`,
-      deliverables: [
-        'AWS console screenshot of thing + shadow',
-        'Rule SQL example sending to DynamoDB',
-        'Device shadow JSON sample'
-      ]
-    },
-    {
-      title: 'Industrial Modbus Logger',
-      category: 'IoT',
-      summary: 'Poll PLC registers over Modbus RTU/TCP and store telemetry in TimescaleDB. Add Grafana panels for trends and alarm states.',
-      image: 'https://placehold.co/600x340/1F2937/f17a1e?text=Modbus+Logger',
-      code: `python
-client = ModbusTcpClient("10.0.0.5")
-rr = client.read_holding_registers(40001, 2)
-`,
-      deliverables: [
-        'Register map screenshot',
-        'Grafana trend screenshot',
-        'Timescale hypertable creation SQL'
-      ]
-    },
-    {
-      title: 'BLE Beacon Tracker',
-      category: 'IoT',
-      summary: 'Use ESP32 in scanner mode to triangulate BLE beacons and push RSSI maps to a floor-plan overlay.',
-      image: 'https://placehold.co/600x340/0f172a/4DA9E2?text=BLE+Tracker',
-      code: `cpp
-BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
-for (int i = 0; i < foundDevices.getCount(); i++) { /* log RSSI */ }
-`,
-      deliverables: [
-        'Floor plan overlay screenshot with dots',
-        'ESP32 firmware snippet for scanning',
-        'Heatmap matplotlib sample'
-      ]
-    },
-    {
-      title: 'Smart Parking Lot',
-      category: 'IoT',
-      summary: 'Deploy ultrasonic sensors per slot, push occupancy to MQTT, and drive LED signage. Includes enclosure tips and cable routing.',
-      image: 'https://placehold.co/600x340/111827/4DA9E2?text=Smart+Parking',
-      code: `cpp
-long duration = pulseIn(ECHO_PIN, HIGH);
-int distance = duration * 0.034 / 2;
-if (distance < 40) mqtt.publish("parking/slot1", "occupied");
-`,
-      deliverables: [
-        'Lot map screenshot with live counts',
-        'Enclosure photo for weatherproofing',
-        'LED signage wiring diagram'
-      ]
-    },
-
-    // AI & Agentic (8)
-    {
-      title: 'Voice Assistant on Raspberry Pi with Local LLM',
-      category: 'AI & Agentic',
-      summary: 'Create a wake-word driven assistant using Picovoice Porcupine + a 7B LLM running on the Pi with quantization. Add audio feedback and home control intents.',
-      image: 'https://placehold.co/600x340/0f172a/f17a1e?text=Pi+Voice+Assistant',
-      code: `python
-if porcupine.process(pcm) >= 0:
-    response = llm.generate(prompt=transcript)
-    tts.play(response)
-`,
-      deliverables: [
-        'Waveform screenshot on wake detection',
-        'Home control intent map image',
-        'Code for streaming mic to LLM with caching'
-      ]
-    },
-    {
-      title: 'Sensor-Orchestrating Agent with LangChain',
-      category: 'AI & Agentic',
-      summary: 'Wire LangChain agents to decide which sensor to query (temperature, camera, relay). Use tool-calling to execute Python functions and return summarized reports.',
-      image: 'https://placehold.co/600x340/111827/4DA9E2?text=LangChain+Tools',
-      code: `python
-tools = [get_temperature_tool, take_snapshot_tool, toggle_relay_tool]
-agent = initialize_agent(tools, llm, agent=AgentType.OPENAI_FUNCTIONS)
-`,
-      deliverables: [
-        'Sequence diagram screenshot of agent/tool calls',
-        'Terminal transcript image of multi-tool run',
-        'Tool schema code snippet'
-      ]
-    },
-    {
-      title: 'RAG for Maintenance Manuals',
-      category: 'AI & Agentic',
-      summary: 'Ingest PDF manuals into a vector store and expose a chat UI for technicians. Add source citations and safety guardrails.',
-      image: 'https://placehold.co/600x340/1F2937/f17a1e?text=RAG+Maintenance',
-      code: `python
-docs = loader.load()
-vectordb = Chroma.from_documents(docs, embedding=emb)
-qa = ConversationalRetrievalChain.from_llm(llm, vectordb.as_retriever())
-`,
-      deliverables: [
-        'Chat UI screenshot with citations',
-        'Vector DB schema snippet',
-        'Guardrail prompt template sample'
-      ]
-    },
-    {
-      title: 'Vision-Language Quality Inspector',
-      category: 'AI & Agentic',
-      summary: 'Combine OpenCV preprocessing with a vision-language model to score defects on product photos. Provide bounding boxes and textual rationales.',
-      image: 'https://placehold.co/600x340/0f172a/4DA9E2?text=VL+Inspector',
-      code: `python
-prompt = [{"type": "text", "text": "Find scratches"}, {"type": "image_url", "image_url": url}]
-resp = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role":"user","content":prompt}])
-`,
-      deliverables: [
-        'Inspection screenshot with boxes and scores',
-        'REST response sample with rationale',
-        'Preprocessing code for defect crops'
-      ]
-    },
-    {
-      title: 'Multi-Agent Ops Board',
-      category: 'AI & Agentic',
-      summary: 'Design a small ops board where planner, executor, and verifier agents coordinate deployments. Persist state in SQLite and visualize tasks in React.',
-      image: 'https://placehold.co/600x340/111827/f17a1e?text=Multi+Agent+Ops',
-      code: `python
-planner = Agent("planner", tools=[deploy_tool])
-verifier = Agent("verifier", tools=[log_tool])
-board.run_cycle(ticket)
-`,
-      deliverables: [
-        'Ops board UI screenshot',
-        'SQLite schema diagram',
-        'Agent handoff transcript image'
-      ]
-    },
-    {
-      title: 'Robot Arm Agent Bridge',
-      category: 'AI & Agentic',
-      summary: 'Expose robot arm actions (move, pick, place) as tools to an LLM agent. Add safety bounding boxes and dry-run simulator before execution.',
-      image: 'https://placehold.co/600x340/1F2937/4DA9E2?text=Robot+Agent',
-      code: `python
-@tool
-def move_joint(joint: int, angle: float):
-    return robot.move_joint(joint, angle, dry_run=True)
-`,
-      deliverables: [
-        'Simulation screenshot showing planned poses',
-        'Safety envelope diagram',
-        'Tool schema JSON sample'
-      ]
-    },
-    {
-      title: 'Agentic IoT Anomaly Handler',
-      category: 'AI & Agentic',
-      summary: 'Use anomaly scores from IoT sensors to prompt an agent that decides remediation steps (reset device, notify ops, escalate). Log all actions with audit trails.',
-      image: 'https://placehold.co/600x340/0f172a/f17a1e?text=IoT+Anomaly+Agent',
-      code: `python
-if score > 0.9:
-    plan = agent.run(f"Sensor {sensor_id} spiking to {score}. Decide action.")
-`,
-      deliverables: [
-        'Alert screenshot with agent decision',
-        'Audit log table snapshot',
-        'Policy prompt template snippet'
-      ]
-    },
-    {
-      title: 'Guardrailed LLM for CV Pipelines',
-      category: 'AI & Agentic',
-      summary: 'Add guardrails to CV pipelines using JSON schemas and scorecards. Validate every model output before forwarding to downstream PLCs.',
-      image: 'https://placehold.co/600x340/111827/4DA9E2?text=Guardrails+LLM',
-      code: `python
-schema = {"type":"object","properties":{"decision":{"enum":["ok","reject"]}}}
-validated = guardrails.validate(output, schema=schema)
-`,
-      deliverables: [
-        'Validation report screenshot',
-        'Schema JSON file preview',
-        'Example rejected output with reason'
-      ]
-    }
-  ];
-
-  const tutorialsWithSlugs = tutorials.map(t => ({ ...t, slug: slugify(t.title) }));
-
-  const filteredTutorials = tutorialFilter === 'All'
-    ? tutorialsWithSlugs
-    : tutorialsWithSlugs.filter(t => t.category === tutorialFilter);
-
-  useEffect(() => {
-    if (viewMode !== 'list') return;
-    if (tutorialFilter === 'All') {
-      setSelectedTutorial(tutorialsWithSlugs[0] || null);
-      return;
-    }
-    const first = tutorialsWithSlugs.find(t => t.category === tutorialFilter);
-    setSelectedTutorial(first || null);
-  }, [tutorialFilter, tutorialsWithSlugs, viewMode]);
-
-  useEffect(() => {
-    const openFromHash = () => {
-      const hash = window.location.hash;
-      if (hash.startsWith('#tutorial/')) {
-        const slug = decodeURIComponent(hash.replace('#tutorial/', ''));
-        const found = tutorialsWithSlugs.find(t => t.slug === slug);
-        if (found) {
-          setSelectedTutorial(found);
-          setTutorialFilter(found.category);
-          setViewMode('tutorial-detail');
-        }
-      } else if (hash === '#tutorials') {
-        setViewMode('list');
-      }
-    };
-    openFromHash();
-    window.addEventListener('hashchange', openFromHash);
-    return () => window.removeEventListener('hashchange', openFromHash);
-  }, [tutorialsWithSlugs]);
 
   const projects = [
     // --- FROM IMAGE 3 (Workshops & Environment) ---
@@ -1194,77 +416,6 @@ validated = guardrails.validate(output, schema=schema)
     ? projects 
     : projects.filter(p => p.category.includes(filter) || p.category === filter);
 
-  if (viewMode === 'tutorial-detail' && selectedTutorial) {
-    return (
-      <div className="min-h-screen font-sans" style={{ backgroundColor: colors.darkBg, color: colors.textLight }}>
-        {navBar}
-        <main className="pt-24 pb-16">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <button 
-              onClick={() => { setViewMode('list'); window.location.hash = '#tutorials'; }}
-              className="inline-flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors mb-6"
-            >
-              <ChevronRight className="w-4 h-4 rotate-180" />
-              Back to tutorials
-            </button>
-
-            <div className="bg-gray-900 border border-gray-800 rounded-3xl overflow-hidden shadow-2xl">
-              <div className="h-80 w-full bg-gray-800 overflow-hidden">
-                <img 
-                  src={selectedTutorial.image}
-                  alt={selectedTutorial.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-8 lg:p-10">
-                <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-widest font-semibold" style={{ color: colors.brandBlue }}>
-                  <span className="px-3 py-1 rounded-full bg-gray-800 border border-gray-700 text-white">{selectedTutorial.category}</span>
-                  <span className="text-gray-400">Tutorial</span>
-                </div>
-                <h1 className="text-3xl lg:text-4xl font-extrabold text-white mt-3">{selectedTutorial.title}</h1>
-                <p className="mt-4 text-lg leading-relaxed" style={{ color: colors.textGray }}>
-                  {selectedTutorial.summary}
-                </p>
-
-                <div className="mt-8 grid lg:grid-cols-2 gap-6">
-                  <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
-                    <p className="text-sm font-semibold text-gray-200 mb-3">What you’ll capture</p>
-                    <ul className="space-y-3 text-sm" style={{ color: colors.textLight }}>
-                      {selectedTutorial.deliverables.map((item, i) => (
-                        <li key={i} className="flex gap-3">
-                          <span className="text-blue-400">•</span>
-                          <span className="text-gray-300">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
-                    <p className="text-sm font-semibold text-gray-200 mb-3">Starter code</p>
-                    <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 h-full">
-                      <pre className="text-xs text-gray-200 whitespace-pre-wrap leading-relaxed">
-{selectedTutorial.code}
-                      </pre>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-8 bg-gray-800 border border-gray-700 rounded-2xl p-6">
-                  <p className="text-sm font-semibold text-gray-200 mb-3">How to use this tutorial</p>
-                  <ol className="list-decimal list-inside space-y-2 text-sm" style={{ color: colors.textLight }}>
-                    <li>Review the summary and asset list, gather the listed screenshots/photos and wiring references.</li>
-                    <li>Start from the starter code; adapt pins/paths to your hardware, then extend with your own requirements.</li>
-                    <li>Capture your build steps and final outputs to replace the placeholders when publishing.</li>
-                  </ol>
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen font-sans" style={{ backgroundColor: colors.darkBg, color: colors.textLight }}>
       {navBar}
@@ -1374,146 +525,19 @@ validated = guardrails.validate(output, schema=schema)
               </div>
               <p className="text-gray-400 font-medium">Recognition Accuracy</p>
             </div>
-             <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-orange-500 transition-colors">
-              <div className="flex items-center gap-4 mb-2">
-                <Activity className="w-8 h-8 text-orange-400" />
-                <h3 className="text-4xl font-bold text-white">5+</h3>
-              </div>
-              <p className="text-gray-400 font-medium">Years of R&D</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Tutorials Section */}
-      <section id="tutorials" className="py-20 bg-gray-950 border-y border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <h2 className="text-base font-semibold tracking-wide uppercase" style={{ color: colors.brandOrange }}>
-              50 Tutorials Across Pi, Arduino, CV, ML, and IoT
-            </h2>
-            <p className="mt-3 text-3xl leading-8 font-extrabold tracking-tight text-white sm:text-4xl">
-              Step-by-step builds with screenshots, wiring, and code
-            </p>
-            <p className="mt-4 text-lg" style={{ color: colors.textGray }}>
-              Each tutorial includes the required assets: wiring photos/screenshots, image proofs, and starter code blocks so you can replicate the build end-to-end.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-2">
-              {tutorialCategories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setTutorialFilter(cat)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                    tutorialFilter === cat 
-                    ? 'bg-white text-gray-900 shadow-lg scale-105' 
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid gap-8 lg:grid-cols-3">
-            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredTutorials.map((tutorial, idx) => (
-                <button 
-                  key={idx}
-                  onClick={() => {
-                    setSelectedTutorial(tutorial);
-                    setViewMode('tutorial-detail');
-                    window.location.hash = `tutorial/${tutorial.slug}`;
-                  }}
-                  className={`text-left bg-gray-800 border ${selectedTutorial === tutorial ? 'border-blue-400 shadow-xl' : 'border-gray-700 hover:border-gray-500'} rounded-2xl overflow-hidden shadow-lg transition-all flex flex-col focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                >
-                  <div className="relative h-40 w-full overflow-hidden bg-gray-900 border-b border-gray-700">
-                    <div className="absolute top-3 left-3 z-20 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold border border-gray-600 bg-gray-900 bg-opacity-80 text-gray-200 shadow">
-                      <Bot className="w-3 h-3 text-orange-300" />
-                      <span>{tutorial.category}</span>
-                    </div>
-                    <img 
-                      src={tutorial.image} 
-                      alt={tutorial.title}
-                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent opacity-60"></div>
-                  </div>
-
-                  <div className="p-5 flex-1 flex flex-col">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-lg font-bold text-white leading-tight">{tutorial.title}</h3>
-                      <div className="bg-gray-900 p-1.5 rounded-lg border border-gray-700">
-                        <ArrowRight className="w-4 h-4 text-gray-400" />
-                      </div>
-                    </div>
-                    <p className="text-sm mt-3 leading-relaxed" style={{ color: colors.textGray }}>
-                      {tutorial.summary}
-                    </p>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl">
-              {selectedTutorial ? (
-                <>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: colors.brandBlue }}>
-                        {selectedTutorial.category}
-                      </p>
-                      <h3 className="text-2xl font-bold text-white mt-1">{selectedTutorial.title}</h3>
-                    </div>
-                    <div className="bg-gray-800 border border-gray-700 rounded-xl p-2">
-                      <Bot className="w-5 h-5 text-orange-300" />
-                    </div>
-                  </div>
-
-                  <div className="mt-4 rounded-xl overflow-hidden border border-gray-800">
-                    <img 
-                      src={selectedTutorial.image}
-                      alt={selectedTutorial.title}
-                      className="w-full h-44 object-cover"
-                    />
-                  </div>
-
-                  <p className="mt-4 text-sm leading-relaxed" style={{ color: colors.textGray }}>
-                    {selectedTutorial.summary}
-                  </p>
-
-                  <div className="mt-5">
-                    <p className="text-sm font-semibold text-gray-200 mb-2">What you get</p>
-                    <ul className="space-y-2 text-sm" style={{ color: colors.textLight }}>
-                      {selectedTutorial.deliverables.map((item, i) => (
-                        <li key={i} className="flex gap-2">
-                          <span className="text-blue-400">•</span>
-                          <span className="text-gray-300">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="mt-5 bg-gray-800 border border-gray-700 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-gray-400 mb-2">Starter code</p>
-                    <pre className="text-xs text-gray-200 whitespace-pre-wrap leading-relaxed">
-{selectedTutorial.code}
-                    </pre>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center text-gray-400">
-                  <p>Select a tutorial to view details, deliverables, and starter code.</p>
+              <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-orange-500 transition-colors">
+                <div className="flex items-center gap-4 mb-2">
+                  <Activity className="w-8 h-8 text-orange-400" />
+                  <h3 className="text-4xl font-bold text-white">10+</h3>
                 </div>
-              )}
-            </div>
+                <p className="text-gray-400 font-medium">Years of R&D</p>
+              </div>
           </div>
-
         </div>
       </section>
 
       {/* Projects Section */}
-      <section id="projects" className="py-20 bg-opacity-50">
+      <section id="projects" ref={portfolioRef} className="py-20 bg-opacity-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-base font-semibold tracking-wide uppercase" style={{ color: colors.brandOrange }}>
@@ -1522,6 +546,19 @@ validated = guardrails.validate(output, schema=schema)
             <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-white sm:text-4xl">
               Innovation in Action
             </p>
+            <div className="mt-4 inline-flex flex-wrap items-center gap-4 px-5 py-3 rounded-full bg-gray-800 border border-gray-700 text-lg text-gray-100 justify-center">
+              <div className="h-20 w-20 rounded-full border-2 border-white shadow-md overflow-hidden bg-gray-900">
+                <img 
+                  src="/eng-mohammed-al-mehaiza.jpg" 
+                  alt="Eng. Mohammed Jassim Al Mehaiza" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex items-center gap-3 text-xl font-semibold">
+                <ShieldCheck className="w-5 h-5" style={{ color: colors.brandOrange }} />
+                <span>All projects developed by Eng. Mohammed Jassim Al Mehaiza.</span>
+              </div>
+            </div>
             
             {/* Filter Buttons */}
             <div className="mt-8 flex flex-wrap justify-center gap-2">
