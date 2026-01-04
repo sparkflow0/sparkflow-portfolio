@@ -92,10 +92,6 @@ const SparkFlowPortfolio = () => {
             {/* Logo */}
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <img src="/logo.png" alt="Spark Flow Consultancy logo" className="h-12 w-auto" />
-              <div className="flex flex-col">
-                <span className="text-xl font-bold tracking-tight text-white leading-none">SPARK FLOW</span>
-                <span className="text-[10px] tracking-[0.2em] uppercase text-cyan-500 font-bold mt-1">Consultancy</span>
-              </div>
             </div>
 
             {/* Desktop Menu */}
@@ -415,17 +411,10 @@ const SparkFlowPortfolio = () => {
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-3">
                <img src="/logo.png" alt="Spark Flow Consultancy logo" className="h-8 w-auto" />
-               <span className="text-lg font-bold text-white tracking-tight">SPARK FLOW</span>
-            </div>
-            
-            <div className="flex space-x-8 text-sm text-gray-400 font-medium">
-               <a href="#" className="hover:text-cyan-400 transition-colors">Privacy Policy</a>
-               <a href="#" className="hover:text-cyan-400 transition-colors">Terms of Service</a>
-               <a href="#" className="hover:text-cyan-400 transition-colors">Sitemap</a>
             </div>
 
             <p className="text-sm text-gray-600">
-              © 2026 Spark Flow Consultancy.
+              © 2026 Spark Flow Consultancy
             </p>
           </div>
         </div>
