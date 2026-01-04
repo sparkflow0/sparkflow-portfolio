@@ -425,7 +425,7 @@ const SparkFlowPortfolio = () => {
             </div>
 
             <p className="text-sm text-gray-600">
-              © 2025 Spark Flow Consultancy.
+              © 2026 Spark Flow Consultancy.
             </p>
           </div>
         </div>
