@@ -1,642 +1,299 @@
-import React, { useRef, useState } from 'react';
-import { 
-  Cpu, 
-  Eye, 
-  ScanFace, 
-  Activity, 
-  Zap, 
-  Code, 
-  Server, 
-  ChevronRight, 
-  Github, 
-  Linkedin, 
-  Mail,
-  ArrowRight,
-  Wifi,
-  Sun,
-  ShieldCheck,
-  Bot,
-  Gamepad2,
-  Globe,
-  X,
-  Phone,
-  Wrench
-} from 'lucide-react';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import React from 'react';
+import { ArrowRight, ShieldCheck, Bot, Globe, Phone, Mail, Activity, Server, Zap } from 'lucide-react';
 
 const SparkFlowPortfolio = () => {
-  const [filter, setFilter] = useState('All');
-  const [activeVideo, setActiveVideo] = useState(null);
-  const [exporting, setExporting] = useState(false);
-  const portfolioRef = useRef(null);
-
   const colors = {
-    brandBlue: '#4DA9E2',
+    brandBlue: '#0ea5e9',
+    brandBlueAlt: '#00b8f0',
     brandOrange: '#f17a1e',
-    darkBg: '#111827',
-    cardBg: '#1F2937',
-    textLight: '#F3F4F6',
-    textGray: '#9CA3AF'
+    darkBg: '#050a14',
+    cardBg: '#0f1728',
+    border: '#1f2b3d',
+    textLight: '#e2e8f0',
+    textGray: '#cbd5e1'
   };
 
-  const navBar = (
-    <nav className="border-b border-gray-800 backdrop-blur-md fixed w-full z-50 bg-opacity-90" style={{ backgroundColor: colors.darkBg }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <img 
-                src="/logo.png" 
-                alt="SparkFlow logo" 
-                className="h-12 w-auto"
-              />
-          </div>
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-8">
-              <a href="#home" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Home</a>
-              <a href="#projects" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Portfolio</a>
-              <a href="#contact" className="bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full text-sm font-medium transition-all" style={{ backgroundColor: colors.brandOrange, color: colors.textLight }}>
-                Contact Us
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </nav>
-  );
-
-  const loadImageAsDataUrl = async (url) => {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    return await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  };
-
-  const exportAsPdf = async () => {
-    if (!portfolioRef.current) return;
-    setExporting(true);
-    try {
-      const canvas = await html2canvas(portfolioRef.current, { 
-        scale: 2, 
-        useCORS: true, 
-        scrollY: -window.scrollY,
-        backgroundColor: colors.darkBg 
-      });
-      const photoData = await loadImageAsDataUrl('/eng-mohammed-al-mehaiza.jpg');
-
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      // Header with photo and credit
-      const headerY = 12;
-      pdf.addImage(photoData, 'JPEG', 10, headerY, 22, 22);
-      pdf.setFontSize(14);
-      pdf.setTextColor(20, 20, 20);
-      pdf.text('All projects developed by Eng. Mohammed Jassim Al Mehaiza.', 36, headerY + 14, { maxWidth: pageWidth - 46 });
-
-      const margin = 10;
-      const imgWidth = pageWidth - margin * 2;
-      const availableHeight = pageHeight - (headerY + 26) - margin; // space for header + bottom margin
-
-      const pxPerMm = canvas.width / imgWidth;
-      const pageHeightPx = availableHeight * pxPerMm;
-
-      const addHeader = () => {
-        pdf.addImage(photoData, 'JPEG', margin, headerY, 22, 22);
-        pdf.setFontSize(14);
-        pdf.setTextColor(20, 20, 20);
-        pdf.text('All projects developed by Eng. Mohammed Jassim Al Mehaiza.', margin + 26, headerY + 14, {
-          maxWidth: pageWidth - margin * 2 - 26
-        });
-      };
-
-      let sliceY = 0;
-      addHeader();
-
-      while (sliceY < canvas.height) {
-        const sliceHeightPx = Math.min(pageHeightPx, canvas.height - sliceY);
-
-        const sliceCanvas = document.createElement('canvas');
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = sliceHeightPx;
-        const ctx = sliceCanvas.getContext('2d');
-        ctx.drawImage(canvas, 0, sliceY, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
-
-        const sliceImg = sliceCanvas.toDataURL('image/png');
-        const sliceHeightMm = (sliceHeightPx / canvas.width) * imgWidth;
-
-        pdf.addImage(sliceImg, 'PNG', margin, headerY + 26, imgWidth, sliceHeightMm);
-
-        sliceY += sliceHeightPx;
-        if (sliceY < canvas.height) {
-          pdf.addPage();
-          addHeader();
-        }
-      }
-
-      pdf.save('sparkflow-portfolio.pdf');
-    } catch (err) {
-      console.error('PDF export failed', err);
-      alert('Unable to export PDF. Please try again.');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  // Categories for filtering
-  const categories = ['All', 'AI & CV', 'IoT & Automation', 'Robotics', 'Web & Apps'];
-
-  const projects = [
-    // --- FROM IMAGE 3 (Workshops & Environment) ---
+  const services = [
     {
-      title: 'Smart Watering System',
-      category: 'IoT & Automation',
-      description: 'Automated irrigation system using soil moisture sensors and Arduino to optimize water usage for agriculture.',
-      img: '/smart-watering-system.png',
-      tags: ['Arduino', 'IoT', 'Sensors']
+      title: 'AI & Business Process Automation',
+      description: 'Designing automation that reduces manual effort, streamlines approvals, and keeps operations consistent.'
     },
     {
-      title: 'Street Traffic Automation',
-      category: 'IoT & Automation',
-      description: 'Intelligent traffic light control system that adapts signal timing based on real-time vehicle density.',
-      img: '/0017.png',
-      tags: ['Automation', 'Traffic Control']
+      title: 'Digital Platform Deployment & Integration',
+      description: 'Selecting, configuring, and integrating platforms so data, workflows, and teams stay aligned.'
     },
     {
-      title: 'IoT Pipe Inspection Car',
-      category: 'Robotics',
-      description: 'Remote-controlled rover equipped with cameras and sensors for inspecting oil pipes and hazardous tunnels.',
-      img: '/0018.png',
-      tags: ['RC', 'Inspection', 'IoT']
+      title: 'WhatsApp & Communication Automation',
+      description: 'Building compliant messaging flows for customer service, notifications, and internal coordination.'
     },
     {
-      title: 'Smart Solar Umbrella',
-      category: 'IoT & Automation',
-      description: 'A solar-powered umbrella offering mobile charging ports and automated opening/closing based on sunlight.',
-      img: '/0019.png',
-      tags: ['Solar', 'Green Tech', 'Arduino']
-    },
-
-    // --- FROM IMAGE 1 (Security & AI) ---
-    {
-      title: 'Sanitation Gate (AI Mask)',
-      category: 'AI & CV',
-      description: 'Automatic sanitation gate with computer vision to enforce mask-wearing before granting entry.',
-      img: '/0016.png',
-      tags: ['Computer Vision', 'Safety', 'Raspberry Pi']
+      title: 'Data, Dashboards & Operational Reporting',
+      description: 'Turning raw data into decision-ready insights with clear ownership and resilient pipelines.'
     },
     {
-      title: 'Facial Recognition Door',
-      category: 'AI & CV',
-      description: 'Secure access control system using facial biometrics to unlock sliding doors for authorized personnel.',
-      img: '/0015.png',
-      tags: ['FaceID', 'Security', 'RFID']
-    },
-    {
-      title: 'Autonomous Bot (PixyCam)',
-      category: 'Robotics',
-      description: 'Self-driving robot utilizing PixyCam for color-coded object tracking and obstacle avoidance.',
-      img: '/00110.png',
-      tags: ['PixyCam', 'Autonomous', 'Robotics']
-    },
-    {
-      title: 'Voice-Activated Robotic Head',
-      category: 'Robotics',
-      description: 'Animatronic human head capable of voice interaction and facial expressions driven by servos.',
-      img: '/0013.png',
-      video: '/voice-activated-robotic-head.mp4',
-      tags: ['Voice Rec', 'Animatronics', 'AI']
-    },
-    {
-      title: '3D Scanning Bust',
-      category: 'AI & CV',
-      description: 'High-precision 3D scanning setup for digitizing physical busts into CAD-ready models.',
-      img: '/0012.png',
-      tags: ['3D Scanning', 'Modeling']
-    },
-
-    // --- FROM IMAGE 2 (The Big Grid) ---
-    {
-      title: 'Solar Panel Cleaning Bot',
-      category: 'Robotics',
-      description: 'Autonomous robot designed to travel along solar arrays, cleaning dust to maintain peak efficiency.',
-      img: '/00126.png',
-      tags: ['Solar', 'Robotics', 'Automation']
-    },
-    {
-      title: 'Laser Cutting Machine',
-      category: 'IoT & Automation',
-      description: 'Custom-built CNC laser cutter for precise acrylic and wood fabrication prototyping.',
-      img: '/00127.png',
-      tags: ['CNC', 'Laser', 'Fabrication']
-    },
-    {
-      title: 'Smart Buoy (LoRa)',
-      category: 'IoT & Automation',
-      description: 'Marine monitoring buoy transmitting water quality data over long distances using LoRaWAN.',
-      img: '/0011.png',
-      tags: ['LoRa', 'Marine', 'IoT']
-    },
-    {
-      title: 'Maze Solving Robot',
-      category: 'Robotics',
-      description: 'Micro-mouse robot implementing flood-fill algorithms to solve physical mazes autonomously.',
-      img: '/00125.png',
-      tags: ['Algorithms', 'Robotics', 'Arduino']
-    },
-    {
-      title: 'Horse Riding Helmet GPS',
-      category: 'IoT & Automation',
-      description: 'Safety helmet with integrated GPS and fall detection to alert emergency contacts during accidents.',
-      img: '/00120.png',
-      tags: ['GPS', 'Safety', 'Wearable']
-    },
-    {
-      title: 'Automatic Control System',
-      category: 'IoT & Automation',
-      description: 'Centralized rack-mounted control units for large-scale facility automation (e.g., Mosque Amplifiers).',
-      img: '/00121.png',
-      tags: ['Industrial', 'Automation', 'Control']
-    },
-    {
-      title: 'IoT Weather Station',
-      category: 'IoT & Automation',
-      description: 'Self-sustaining station monitoring wind, temp, and humidity, pushing data to the cloud.',
-      img: '/00122.png',
-      tags: ['Weather', 'IoT', 'Cloud']
-    },
-    {
-      title: 'Vaccination Verification',
-      category: 'Web & Apps',
-      description: 'Digital kiosk for verifying vaccination status via QR codes for secure venue entry.',
-      img: '/00124.png',
-      tags: ['QR', 'HealthTech', 'Kiosk']
-    },
-    {
-      title: 'Blind Navigation Wristband',
-      category: 'IoT & Automation',
-      description: 'Haptic feedback wristband using ultrasonic sensors to guide visually impaired users.',
-      img: '/00118.png',
-      tags: ['Accessibility', 'Ultrasonic', 'Wearable']
-    },
-    {
-      title: 'Coin Operated Printer',
-      category: 'IoT & Automation',
-      description: 'Self-service printing station activated by coin insertion, integrated with printer APIs.',
-      img: '/00123.png',
-      tags: ['Automation', 'Payment', 'Hardware']
-    },
-    {
-      title: 'Long Range RF Control',
-      category: 'Robotics',
-      description: 'High-power RF remote control system designed for long-distance drone or rover operation.',
-      img: '/00116.png',
-      tags: ['RF', 'Communication', 'Hardware']
-    },
-    {
-      title: 'Web Home Automation',
-      category: 'Web & Apps',
-      description: 'Comprehensive web dashboard for controlling home appliances, lights, and locks remotely.',
-      img: '/00115.png',
-      tags: ['Web', 'IoT', 'Smart Home']
-    },
-    {
-      title: 'Color Mixer Machine',
-      category: 'IoT & Automation',
-      description: 'Automated liquid dispensing system that mixes primary colors to create precise custom shades.',
-      img: '/00114.png',
-      tags: ['Fluidics', 'Automation', 'Arduino']
-    },
-    {
-      title: 'Robotic Arm (4 DOF)',
-      category: 'Robotics',
-      description: '4-Degree-of-Freedom robotic arm programmable for pick-and-place industrial tasks.',
-      img: '/00113.png',
-      tags: ['Robotics', 'Servo', 'Kinematics']
-    },
-    {
-      title: 'NFC Door Control',
-      category: 'IoT & Automation',
-      description: 'Contactless entry system using NFC tags and electromagnetic locks for secure access.',
-      img: '/00112.png',
-      tags: ['NFC', 'Security', 'Access Control']
-    },
-    
-    // --- NEW WEB & APPS (Using Branded Placeholders) ---
-    {
-      title: 'MindArena',
-      category: 'Web & Apps',
-      description: 'Interactive cognitive training web application designed to improve memory and focus through gamified challenges.',
-      img: '/mindarena.png',
-      link: 'https://mindarena.onrender.com/',
-      tags: ['React', 'Brain Training', 'Web App']
-    },
-    {
-      title: 'SpareEye',
-      category: 'Web & Apps',
-      description: 'Accessibility-focused web platform assisting visually impaired users via AI-powered descriptive tools.',
-      img: '/SpareEye.png',
-      link: 'https://spareeye.onrender.com/',
-      tags: ['Accessibility', 'AI', 'Web App']
-    },
-    {
-      title: 'Volunteers Hub',
-      category: 'Web & Apps',
-      description: 'Community platform connecting volunteers with local organizations for event management and coordination.',
-      img: 'https://placehold.co/600x400/1F2937/4DA9E2?text=Volunteers+Hub',
-      link: 'https://volunteers-hub.onrender.com/',
-      tags: ['Social Impact', 'Community', 'Web Platform']
-    },
-    {
-      title: 'Connect-4',
-      category: 'Web & Apps',
-      description: 'Classic strategy board game implemented as a browser-based application with responsive logic.',
-      img: '/connect-4.png',
-      link: 'https://mjassim2030.github.io/Connect-4/',
-      tags: ['Game Dev', 'JavaScript', 'Logic']
-    },
-    {
-      title: 'Tic-Tac-Toe Lab',
-      category: 'Web & Apps',
-      description: 'Clean, modern implementation of the Tic-Tac-Toe game featuring minimax algorithm for AI opponents.',
-      img: '/tic-tac-toe.png',
-      link: 'https://mjassim2030.github.io/javascript-browser-game-tic-tac-toe-lab/',
-      tags: ['Game Dev', 'Algorithms', 'Web']
-    },
-    {
-      title: 'Circuit Simulator',
-      category: 'Web & Apps',
-      description: 'Web-based interface for visualizing data streams and controlling connected Arduino modules.',
-      img: '/arduino-platform.png',
-      link: 'https://arduino-platform.vercel.app',
-      tags: ['IoT Dashboard', 'Arduino', 'Vercel']
-    },
-    {
-      title: 'PS5 Controller Config',
-      category: 'Web & Apps',
-      description: 'Utility web tool for mapping buttons and testing input response for DualSense controllers.',
-      img: '/ps5.png',
-      link: 'https://sparkflow0.github.io/ps5-controller/',
-      tags: ['Hardware Interface', 'Gamepad API', 'Tool']
-    },
-    {
-      title: 'LPG Leak Detection',
-      category: 'Web & Apps',
-      description: 'Real-time safety dashboard monitoring gas sensor levels and triggering alerts for detected leaks.',
-      img: '/lpg-leak.png',
-      link: 'https://lpg-leak-detection.firebaseapp.com/',
-      tags: ['Safety', 'IoT', 'Firebase']
-    },
-    {
-      title: 'Waste Management System',
-      category: 'Web & Apps',
-      description: 'Smart city dashboard tracking waste bin fill-levels to optimize collection routes.',
-      img: '/waste-management.png',
-      link: 'https://waste-management-system-c9715.firebaseapp.com/',
-      tags: ['Smart City', 'Analytics', 'Firebase']
-    },
-    {
-      title: 'Solar Tracker',
-      category: 'Web & Apps',
-      description: 'Monitoring interface for solar panel efficiency, tracking voltage outputs and sunlight exposure.',
-      img: '/solar-tracker.png',
-      link: 'https://solar-tracker-2f8a7.firebaseapp.com/',
-      tags: ['Green Energy', 'Data Viz', 'IoT']
+      title: 'Technical Advisory & Solution Architecture',
+      description: 'Providing vendor-agnostic architecture, due diligence, and delivery oversight for critical initiatives.'
     }
   ];
 
-  const filteredProjects = filter === 'All' 
-    ? projects 
-    : projects.filter(p => p.category.includes(filter) || p.category === filter);
+  const approach = [
+    {
+      title: 'Understand Operations',
+      text: 'Collaborative discovery to map current processes, systems, and constraints.'
+    },
+    {
+      title: 'Identify Opportunities',
+      text: 'Prioritize automation and integration wins with clear ownership and outcomes.'
+    },
+    {
+      title: 'Deploy & Integrate',
+      text: 'Implement platforms, connect data, and configure workflows with proper governance.'
+    },
+    {
+      title: 'Adopt & Support',
+      text: 'Enable teams, monitor performance, and iterate for continuous improvement.'
+    }
+  ];
+
+  const sectors = [
+    'Enterprises & SMEs',
+    'Education',
+    'Healthcare',
+    'Semi-government & regulated entities',
+    'Service-based organizations'
+  ];
+
+  const reasons = [
+    {
+      title: 'Systems-first mindset',
+      text: 'We architect for reliability, maintainability, and scale from day one.'
+    },
+    {
+      title: 'Vendor-agnostic',
+      text: 'Recommendations are driven by fit, compliance, and longevity?not tooling bias.'
+    },
+    {
+      title: 'Local market understanding',
+      text: 'Regional operating models, regulations, and support expectations are baked into delivery.'
+    },
+    {
+      title: 'Long-term partnership',
+      text: 'We coordinate stakeholders, platforms, and partners to keep outcomes on track.'
+    }
+  ];
 
   return (
     <div className="min-h-screen font-sans" style={{ backgroundColor: colors.darkBg, color: colors.textLight }}>
-      {navBar}
+      <nav className="border-b border-gray-800 backdrop-blur-md fixed w-full z-50 bg-opacity-90" style={{ backgroundColor: colors.darkBg, borderColor: colors.border }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <img src="/logo.png" alt="Spark Flow logo" className="h-10 w-auto" />
+            </div>
+            <div className="hidden md:block">
+              <div className="ml-10 flex items-baseline space-x-8 text-sm font-medium">
+                <a href="#home" className="hover:text-white px-3 py-2 rounded-md transition-colors">Home</a>
+                <a href="#services" className="hover:text-white px-3 py-2 rounded-md transition-colors">Services</a>
+                <a href="#approach" className="hover:text-white px-3 py-2 rounded-md transition-colors">Approach</a>
+                <a href="#sectors" className="hover:text-white px-3 py-2 rounded-md transition-colors">Sectors</a>
+                <a href="#contact" className="bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition-all" style={{ backgroundColor: colors.brandOrange, color: colors.textLight }}>
+                  Contact
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
 
-      {/* Hero Section */}
-      <section id="home" className="pt-32 pb-20 lg:pt-48 lg:pb-32 relative overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full opacity-10 blur-3xl" style={{ backgroundColor: colors.brandBlue }}></div>
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full opacity-10 blur-3xl" style={{ backgroundColor: colors.brandOrange }}></div>
-
+      <section id="home" className="pt-32 pb-20 lg:pt-44 lg:pb-28 relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mr-24 -mt-24 w-96 h-96 rounded-full opacity-10 blur-3xl" style={{ backgroundColor: colors.brandBlue }}></div>
+        <div className="absolute bottom-0 left-0 -ml-24 -mb-24 w-80 h-80 rounded-full opacity-10 blur-3xl" style={{ backgroundColor: colors.brandOrange }}></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center lg:text-left lg:flex lg:items-center lg:justify-between">
-            <div className="lg:w-1/2">
-              <h1 className="text-4xl tracking-tight font-extrabold sm:text-5xl md:text-6xl">
-                <span className="block">Igniting Intelligence in</span>
-                <span className="block mt-2" style={{ color: colors.brandBlue }}>Embedded Systems</span>
-              </h1>
-              <p className="mt-4 max-w-md mx-auto text-lg sm:text-xl lg:mx-0" style={{ color: colors.textGray }}>
-                Spark Flow specializes in bridging the gap between advanced AI algorithms and rugged hardware. From Raspberry Pi computer vision to Arduino automation.
+          <div className="grid lg:grid-cols-2 gap-10 items-center">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide" style={{ color: colors.brandOrange }}>
+                Spark Flow Consultancy
               </p>
-              <div className="mt-8 flex justify-center lg:justify-start gap-4">
-                <a href="#projects" className="flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white transition-transform hover:scale-105" style={{ backgroundColor: colors.brandBlue }}>
-                  View Projects
+              <h1 className="text-4xl tracking-tight font-extrabold sm:text-5xl md:text-6xl leading-tight">
+                AI & Automation Consultancy for Scalable Digital Operations
+              </h1>
+              <p className="mt-4 text-lg sm:text-xl max-w-2xl" style={{ color: colors.textGray }}>
+                Strategy. Integration. Delivery. We align teams, platforms, and data so your operations run reliably at scale.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-4">
+                <a href="#contact" className="flex items-center justify-center px-6 py-3 rounded-md text-white font-semibold transition-transform hover:scale-105" style={{ backgroundColor: colors.brandOrange }}>
+                  Discuss Your Requirements
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </a>
-                <a href="#contact" className="flex items-center justify-center px-8 py-3 border border-gray-700 text-base font-medium rounded-md text-gray-300 hover:bg-gray-800 transition-colors">
-                  Contact Us
+                <a href="#services" className="flex items-center justify-center px-6 py-3 rounded-md border border-gray-700 text-gray-200 hover:bg-gray-800 transition-colors">
+                  Explore Our Services
                 </a>
               </div>
             </div>
-            {/* Hero Visual */}
-            <div className="mt-12 lg:mt-0 lg:w-1/2 flex justify-center relative">
-               <div className="relative w-full max-w-lg aspect-square">
-                  <div className="absolute inset-0 border-2 rounded-full opacity-20 animate-pulse" style={{ borderColor: colors.brandBlue }}></div>
-                  <div className="absolute inset-8 border-2 rounded-full opacity-20" style={{ borderColor: colors.brandOrange }}></div>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-800 p-6 rounded-2xl shadow-2xl border border-gray-700 z-20">
-                    <Cpu className="w-16 h-16" style={{ color: colors.brandBlue }} />
-                  </div>
-                  <div className="absolute top-20 right-20 bg-gray-800 p-3 rounded-xl shadow-xl border border-gray-700 z-10 animate-bounce">
-                    <Eye className="w-8 h-8" style={{ color: colors.brandOrange }} />
-                  </div>
-                  <div className="absolute bottom-20 left-20 bg-gray-800 p-3 rounded-xl shadow-xl border border-gray-700 z-10 animate-bounce">
-                    <Activity className="w-8 h-8" style={{ color: colors.brandOrange }} />
-                  </div>
-               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {activeVideo && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm p-4"
-          onClick={() => setActiveVideo(null)}
-        >
-          <div 
-            className="relative bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden"
-            onClick={e => e.stopPropagation()}
-          >
-            <button 
-              className="absolute top-3 right-3 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-full p-2 border border-gray-700"
-              onClick={() => setActiveVideo(null)}
-              aria-label="Close video"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <div className="w-full h-full bg-black">
-              <video 
-                src={activeVideo.video}
-                poster={activeVideo.img}
-                controls
-                autoPlay
-                muted
-                playsInline
-                className="w-full h-full"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Statistics Section */}
-      <section id="stats" className="py-16 relative bg-gray-900 border-y border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <h2 className="text-base font-semibold tracking-wide uppercase" style={{ color: colors.brandOrange }}>Impact by the Numbers</h2>
-          </div>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-blue-500 transition-colors">
-              <div className="flex items-center gap-4 mb-2">
-                <Cpu className="w-8 h-8 text-blue-400" />
-                <h3 className="text-4xl font-bold text-white">45+</h3>
-              </div>
-              <p className="text-gray-400 font-medium">AI Models Deployed</p>
-            </div>
-            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-orange-500 transition-colors">
-              <div className="flex items-center gap-4 mb-2">
-                <Server className="w-8 h-8 text-orange-400" />
-                <h3 className="text-4xl font-bold text-white">120+</h3>
-              </div>
-              <p className="text-gray-400 font-medium">Hardware Integrations</p>
-            </div>
-            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-blue-500 transition-colors">
-              <div className="flex items-center gap-4 mb-2">
-                <ScanFace className="w-8 h-8 text-blue-400" />
-                <h3 className="text-4xl font-bold text-white">99.8%</h3>
-              </div>
-              <p className="text-gray-400 font-medium">Recognition Accuracy</p>
-            </div>
-              <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-orange-500 transition-colors">
-                <div className="flex items-center gap-4 mb-2">
-                  <Activity className="w-8 h-8 text-orange-400" />
-                  <h3 className="text-4xl font-bold text-white">10+</h3>
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-2xl" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                  <ShieldCheck className="w-6 h-6 mb-3" style={{ color: colors.brandBlue }} />
+                  <h3 className="text-lg font-semibold text-white">Strategy</h3>
+                  <p className="text-sm" style={{ color: colors.textGray }}>
+                    Operating models that balance control, speed, and governance.
+                  </p>
                 </div>
-                <p className="text-gray-400 font-medium">Years of R&D</p>
+                <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                  <Server className="w-6 h-6 mb-3" style={{ color: colors.brandOrange }} />
+                  <h3 className="text-lg font-semibold text-white">Integration</h3>
+                  <p className="text-sm" style={{ color: colors.textGray }}>
+                    Connecting platforms, data, and teams into cohesive workflows.
+                  </p>
+                </div>
+                <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                  <Bot className="w-6 h-6 mb-3" style={{ color: colors.brandBlue }} />
+                  <h3 className="text-lg font-semibold text-white">Automation</h3>
+                  <p className="text-sm" style={{ color: colors.textGray }}>
+                    AI-driven automations that are monitored, owned, and supportable.
+                  </p>
+                </div>
+                <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                  <Activity className="w-6 h-6 mb-3" style={{ color: colors.brandOrange }} />
+                  <h3 className="text-lg font-semibold text-white">Delivery</h3>
+                  <p className="text-sm" style={{ color: colors.textGray }}>
+                    Coordinated execution with clear acceptance criteria and success metrics.
+                  </p>
+                </div>
               </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Projects Section */}
-      <section id="projects" ref={portfolioRef} className="py-20 bg-opacity-50">
+      <section id="about" className="py-16 bg-gray-900 border-t border-b border-gray-800" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-base font-semibold tracking-wide uppercase" style={{ color: colors.brandOrange }}>
-              Our Extensive Portfolio
+          <div className="grid lg:grid-cols-3 gap-10 items-start">
+            <div className="lg:col-span-1">
+              <h2 className="text-base font-semibold uppercase tracking-wide" style={{ color: colors.brandOrange }}>
+                Who We Are
+              </h2>
+              <p className="mt-3 text-3xl font-extrabold text-white leading-tight">
+                Consultancy. Systems integrator. Delivery partner.
+              </p>
+              <p className="mt-4 text-lg" style={{ color: colors.textGray }}>
+                We guide organizations through automation and platform adoption with a structured, client-facing approach. The focus is on clarity, accountability, and measurable outcomes.
+              </p>
+            </div>
+            <div className="lg:col-span-2 grid md:grid-cols-2 gap-6">
+              <div className="bg-gray-800 rounded-xl p-6 border border-gray-700" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+                <h3 className="text-xl font-semibold text-white mb-2">Strategic thinking</h3>
+                <p className="text-sm" style={{ color: colors.textGray }}>
+                  Engagements start with operating realities, not tools. We map priorities to business objectives and controls.
+                </p>
+              </div>
+              <div className="bg-gray-800 rounded-xl p-6 border border-gray-700" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+                <h3 className="text-xl font-semibold text-white mb-2">Client engagement</h3>
+                <p className="text-sm" style={{ color: colors.textGray }}>
+                  Collaborative workshops, clear owners, and decision pathways keep delivery moving.
+                </p>
+              </div>
+              <div className="bg-gray-800 rounded-xl p-6 border border-gray-700" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+                <h3 className="text-xl font-semibold text-white mb-2">Delivery & coordination</h3>
+                <p className="text-sm" style={{ color: colors.textGray }}>
+                  We coordinate platforms, partners, and internal teams to de-risk timelines and handovers.
+                </p>
+              </div>
+              <div className="bg-gray-800 rounded-xl p-6 border border-gray-700" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+                <h3 className="text-xl font-semibold text-white mb-2">Sustainability</h3>
+                <p className="text-sm" style={{ color: colors.textGray }}>
+                  Governance, documentation, and support models ensure solutions remain maintainable.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="services" className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-base font-semibold uppercase tracking-wide" style={{ color: colors.brandOrange }}>
+              What We Do
             </h2>
-            <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-white sm:text-4xl">
-              Innovation in Action
-            </p>
-            
-            {/* Filter Buttons */}
-            <div className="mt-8 flex flex-wrap justify-center gap-2">
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setFilter(cat)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                    filter === cat 
-                    ? 'bg-white text-gray-900 shadow-lg scale-105' 
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
+            <p className="mt-2 text-3xl font-extrabold text-white">Core services built around outcomes</p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredProjects.map((project, idx) => (
-              <div 
-                key={idx} 
-                className={`group relative bg-gray-800 rounded-2xl overflow-hidden border border-gray-700 flex flex-col h-full hover:border-gray-500 transition-all duration-300 shadow-lg hover:shadow-2xl ${project.video ? 'cursor-pointer' : ''}`}
-                onClick={() => project.video && setActiveVideo(project)}
-              >
-                {project.link && (
-                  <a
-                    href={project.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute inset-0 z-10"
-                    aria-label={`Open ${project.title}`}
-                  />
-                )}
-                
-                {/* Image Area */}
-                <div className="h-48 w-full relative overflow-hidden bg-gray-900 border-b border-gray-700">
-                  <div className="absolute top-3 left-3 z-20 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border border-gray-600 bg-gray-900 bg-opacity-80 text-gray-200 shadow">
-                    <Wrench className="w-3 h-3 text-orange-300" />
-                    <span>DIY Build</span>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {services.map((service, idx) => (
+              <div key={idx} className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-gray-500 transition-colors h-full flex flex-col" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-semibold text-white leading-snug">{service.title}</h3>
+                  <div className="p-2 rounded-lg bg-gray-900 border border-gray-700">
+                    <Zap className="w-5 h-5" style={{ color: colors.brandOrange }} />
                   </div>
-                  {project.size ? (
-                    // Sprite Sheet Logic for Hardware Projects
-                    <div 
-                      className="absolute inset-0 transition-transform duration-700 group-hover:scale-110"
-                      style={{
-                        backgroundImage: `url(${project.img})`,
-                        backgroundSize: project.size,
-                        backgroundPosition: project.pos,
-                        backgroundRepeat: 'no-repeat'
-                      }}
-                    />
-                  ) : project.img ? (
-                    // Direct Image Logic for Web Apps
-                    <img 
-                      src={project.img} 
-                      alt={project.title}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                  ) : (
-                    // Fallback Icon
-                    <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                      <Code className="w-12 h-12 text-gray-600" />
-                    </div>
-                  )}
-                  {/* Overlay Gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent opacity-60"></div>
                 </div>
-                
-                <div className="p-6 flex-1 flex flex-col">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-lg font-bold text-white leading-tight">{project.title}</h3>
-                    <div className="bg-gray-900 p-1.5 rounded-lg border border-gray-700">
-                       <ChevronRight className="w-4 h-4 text-gray-400" />
-                    </div>
-                  </div>
-                  
-                  <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: colors.brandBlue }}>
-                    {project.category}
-                  </p>
-                  
-                  <p className="text-sm leading-relaxed mb-6 flex-1" style={{ color: colors.textGray }}>
-                    {project.description}
-                  </p>
-                  
-                  <div className="flex flex-wrap gap-2 mt-auto">
-                    {project.tags.map((tag, i) => (
-                      <span key={i} className="px-2 py-1 rounded text-[10px] font-semibold tracking-wide bg-gray-700 text-gray-300 border border-gray-600">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                <p className="text-sm" style={{ color: colors.textGray }}>{service.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="approach" className="py-16 bg-gray-900 border-t border-b border-gray-800" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-base font-semibold uppercase tracking-wide" style={{ color: colors.brandOrange }}>
+              How We Work
+            </h2>
+            <p className="mt-2 text-3xl font-extrabold text-white">Methodical, repeatable, transparent</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {approach.map((step, idx) => (
+              <div key={step.title} className="bg-gray-800 rounded-xl p-6 border border-gray-700 h-full" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: colors.brandBlue, color: '#0B1220' }}>
+                    Step {idx + 1}
+                  </span>
+                  <ShieldCheck className="w-5 h-5" style={{ color: colors.brandOrange }} />
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">{step.title}</h3>
+                <p className="text-sm" style={{ color: colors.textGray }}>{step.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="sectors" className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-base font-semibold uppercase tracking-wide" style={{ color: colors.brandOrange }}>
+              Who We Work With
+            </h2>
+            <p className="mt-2 text-3xl font-extrabold text-white">Sectors we support</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            {sectors.map(sector => (
+              <span key={sector} className="px-4 py-2 rounded-full border border-gray-700 bg-gray-800 text-sm font-medium" style={{ color: colors.textLight }}>
+                {sector}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="why" className="py-16 bg-gray-900 border-t border-b border-gray-800" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-base font-semibold uppercase tracking-wide" style={{ color: colors.brandOrange }}>
+              Why Spark Flow
+            </h2>
+            <p className="mt-2 text-3xl font-extrabold text-white">A partner built for delivery and scale</p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            {reasons.map((reason, idx) => (
+              <div key={reason.title} className="bg-gray-800 rounded-xl p-6 border border-gray-700 flex gap-4" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+                <div className="p-3 rounded-xl bg-gray-900 border border-gray-700">
+                  <Globe className="w-6 h-6" style={{ color: idx % 2 === 0 ? colors.brandBlue : colors.brandOrange }} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">{reason.title}</h3>
+                  <p className="text-sm mt-1" style={{ color: colors.textGray }}>{reason.text}</p>
                 </div>
               </div>
             ))}
@@ -644,42 +301,50 @@ const SparkFlowPortfolio = () => {
         </div>
       </section>
 
-      {/* Tech Stack Marquee */}
-      <section className="py-12 border-t border-b border-gray-800 bg-black bg-opacity-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm font-medium uppercase tracking-widest mb-8" style={{ color: colors.textGray }}>Tech Stack</p>
-          <div className="flex justify-center items-center flex-wrap gap-8 lg:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
-             <span className="text-xl font-bold text-white flex items-center gap-2"><Cpu size={20}/> Raspberry Pi</span>
-             <span className="text-xl font-bold text-white flex items-center gap-2"><Zap size={20}/> Arduino</span>
-             <span className="text-xl font-bold text-white flex items-center gap-2"><Eye size={20}/> OpenCV</span>
-             <span className="text-xl font-bold text-white flex items-center gap-2"><Bot size={20}/> TensorFlow</span>
-             <span className="text-xl font-bold text-white flex items-center gap-2"><Code size={20}/> Python</span>
-             <span className="text-xl font-bold text-white flex items-center gap-2"><Wifi size={20}/> IoT</span>
+      <section className="py-16">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="bg-gray-800 border border-gray-700 rounded-2xl p-10" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+            <p className="text-base font-semibold uppercase tracking-wide" style={{ color: colors.brandOrange }}>
+              Ready to move
+            </p>
+            <h3 className="mt-2 text-3xl font-extrabold text-white">Schedule an introductory discussion</h3>
+            <p className="mt-3 text-lg" style={{ color: colors.textGray }}>
+              Let us understand your objectives and outline a pragmatic path to automation and integration.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-4">
+              <a href="#contact" className="px-6 py-3 rounded-md text-white font-semibold transition-transform hover:scale-105" style={{ backgroundColor: colors.brandOrange }}>
+                Contact Our Team
+              </a>
+              <a href="#approach" className="px-6 py-3 rounded-md border border-gray-700 text-gray-200 hover:bg-gray-800 transition-colors">
+                View Our Approach
+              </a>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Contact Section */}
-      <section id="contact" className="py-16 bg-gray-900 border-t border-gray-800">
+      <section id="contact" className="py-16 bg-gray-900 border-t border-gray-800" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <h2 className="text-base font-semibold tracking-wide uppercase" style={{ color: colors.brandOrange }}>
-              Contact Us
+              Contact
             </h2>
             <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-white sm:text-4xl">
-              Let's build something smart together
+              Speak with Spark Flow Consultancy
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1 bg-gray-800 border border-gray-700 rounded-2xl p-6 space-y-4">
+            <div className="lg:col-span-1 bg-gray-800 border border-gray-700 rounded-2xl p-6 space-y-4" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
               <div className="flex items-center gap-3 mb-4">
                 <div className="bg-gray-700 rounded-full p-3 border border-gray-600">
                   <Mail className="w-6 h-6" style={{ color: colors.brandOrange }} />
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">Email</p>
-                  <p className="text-sm text-white font-semibold break-all" style={{ overflowWrap: "anywhere" }}>sparkflow2030@gmail.com</p>
+                  <p className="text-sm text-white font-semibold break-all" style={{ overflowWrap: 'anywhere' }}>
+                    sparkflow2030@gmail.com
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -702,11 +367,11 @@ const SparkFlowPortfolio = () => {
               </div>
             </div>
 
-            <div className="lg:col-span-2 bg-gray-800 border border-gray-700 rounded-2xl p-6">
+            <div className="lg:col-span-2 bg-gray-800 border border-gray-700 rounded-2xl p-6" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
               <form className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Name</label>
-                  <input 
+                  <input
                     type="text"
                     className="w-full rounded-lg bg-gray-900 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-blue-400"
                     placeholder="Your name"
@@ -714,7 +379,7 @@ const SparkFlowPortfolio = () => {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Email</label>
-                  <input 
+                  <input
                     type="email"
                     className="w-full rounded-lg bg-gray-900 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-blue-400"
                     placeholder="you@example.com"
@@ -725,11 +390,11 @@ const SparkFlowPortfolio = () => {
                   <textarea
                     rows="4"
                     className="w-full rounded-lg bg-gray-900 border border-gray-700 text-white px-4 py-3 focus:outline-none focus:border-blue-400"
-                    placeholder="Tell us about your project..."
+                    placeholder="Tell us about your requirements"
                   />
                 </div>
                 <div className="md:col-span-2 flex justify-end">
-                  <button 
+                  <button
                     type="submit"
                     className="px-6 py-3 rounded-lg text-white font-semibold shadow-lg transition-transform hover:scale-105"
                     style={{ backgroundColor: colors.brandOrange }}
@@ -743,27 +408,16 @@ const SparkFlowPortfolio = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-800 py-12 bg-black bg-opacity-30">
+      <footer className="border-t border-gray-800 py-10 bg-black bg-opacity-30" style={{ borderColor: colors.border, backgroundColor: colors.cardBg }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
           <div className="mb-4 md:mb-0">
-            <img 
-              src="/logo.png" 
-              alt="SparkFlow logo" 
-              className="h-9 w-auto"
-            />
-            <p className="text-sm mt-2" style={{ color: colors.textGray }}>© 2025 Spark Flow. All rights reserved.</p>
+            <img src="/logo.png" alt="SparkFlow logo" className="h-9 w-auto" />
+            <p className="text-sm mt-2" style={{ color: colors.textGray }}>? 2025 Spark Flow Consultancy. All rights reserved.</p>
           </div>
-          <div className="flex space-x-6">
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              <Github className="w-6 h-6" />
-            </a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              <Linkedin className="w-6 h-6" />
-            </a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              <Mail className="w-6 h-6" />
-            </a>
+          <div className="flex space-x-6 text-sm" style={{ color: colors.textGray }}>
+            <span>Strategy</span>
+            <span>Integration</span>
+            <span>Delivery</span>
           </div>
         </div>
       </footer>
