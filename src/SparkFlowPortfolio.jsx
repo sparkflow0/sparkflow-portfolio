@@ -54,8 +54,6 @@ const SparkFlowPortfolio = () => {
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-8">
               <a href="#home" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Home</a>
-              <a href="/tutorials" data-spa-link className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Tutorials</a>
-              <a href="/about" data-spa-link className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">About Me</a>
               <a href="#projects" className="hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Portfolio</a>
               <a href="#contact" className="bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full text-sm font-medium transition-all" style={{ backgroundColor: colors.brandOrange, color: colors.textLight }}>
                 Contact Us
@@ -546,19 +544,6 @@ const SparkFlowPortfolio = () => {
             <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-white sm:text-4xl">
               Innovation in Action
             </p>
-            <div className="mt-4 inline-flex flex-wrap items-center gap-4 px-5 py-3 rounded-full bg-gray-800 border border-gray-700 text-lg text-gray-100 justify-center">
-              <div className="h-20 w-20 rounded-full border-2 border-white shadow-md overflow-hidden bg-gray-900">
-                <img 
-                  src="/eng-mohammed-al-mehaiza.jpg" 
-                  alt="Eng. Mohammed Jassim Al Mehaiza" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="flex items-center gap-3 text-xl font-semibold">
-                <ShieldCheck className="w-5 h-5" style={{ color: colors.brandOrange }} />
-                <span>All projects developed by Eng. Mohammed Jassim Al Mehaiza.</span>
-              </div>
-            </div>
             
             {/* Filter Buttons */}
             <div className="mt-8 flex flex-wrap justify-center gap-2">
@@ -682,19 +667,19 @@ const SparkFlowPortfolio = () => {
               Contact Us
             </h2>
             <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-white sm:text-4xl">
-              Let’s build something smart together
+              Let's build something smart together
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1 bg-gray-800 border border-gray-700 rounded-2xl p-6">
+            <div className="lg:col-span-1 bg-gray-800 border border-gray-700 rounded-2xl p-6 space-y-4">
               <div className="flex items-center gap-3 mb-4">
                 <div className="bg-gray-700 rounded-full p-3 border border-gray-600">
                   <Mail className="w-6 h-6" style={{ color: colors.brandOrange }} />
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">Email</p>
-                  <p className="text-lg text-white font-semibold">sparkflow2030@gmail.com</p>
+                  <p className="text-sm text-white font-semibold break-all" style={{ overflowWrap: "anywhere" }}>sparkflow2030@gmail.com</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -703,7 +688,16 @@ const SparkFlowPortfolio = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">Phone</p>
-                  <p className="text-lg text-white font-semibold">+973 3364 1412</p>
+                  <p className="text-sm text-white font-semibold break-words">+973 3364 1412</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="bg-gray-700 rounded-full p-3 border border-gray-600">
+                  <Globe className="w-6 h-6" style={{ color: colors.brandOrange }} />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400">Location</p>
+                  <p className="text-sm text-white font-semibold break-words">Kingdom of Bahrain</p>
                 </div>
               </div>
             </div>
